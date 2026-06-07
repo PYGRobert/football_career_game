@@ -375,6 +375,55 @@ function resolveCompoundCheck(primary,secondary,dc){
 /* ═══ ATTRIBUTE HELPERS ═══ */
 function getEffectiveAttr(key){return state.player.attrs[key]||1}
 
+/* ═══ AGE SYSTEM ═══ */
+/* 年龄阶段：青年期(16-21) 巅峰期(22-26) 成熟期(27-30) 衰退期(31+) */
+function getAgePhase(age){
+  if(age<=21)return'youth';      /* 青年期：成长×1.5 */
+  if(age<=26)return'prime';      /* 巅峰期：成长×1.0 */
+  if(age<=30)return'mature';     /* 成熟期：成长×0.5 */
+  return'decline';                /* 衰退期：禁止成长，属性下滑 */
+}
+
+/* 获取年龄成长倍率（返回实际要加的数值，处理小数） */
+function getAgeGrowthAmount(baseAmount,age){
+  const phase=getAgePhase(age);
+  if(phase==='decline')return 0; /* 衰退期禁止成长 */
+  let multiplier=1;
+  if(phase==='youth')multiplier=1.5;
+  else if(phase==='mature')multiplier=0.5;
+  const raw=baseAmount*multiplier;
+  /* 处理小数：使用四舍五入，但保证至少0 */
+  return Math.max(0,Math.round(raw));
+}
+
+/* 年龄衰退检查：赛季末调用，31岁后每年随机一项属性-1 */
+function applyAgeDecline(){
+  const age=state.player.age;
+  if(age<31)return null; /* 31岁前不衰退 */
+  /* 衰退概率随年龄增加 */
+  const declineChance=Math.min(0.9,(age-30)*0.15); /* 31岁15%, 32岁30%... */
+  if(Math.random()>declineChance)return null;
+  /* 随机选择一项属性下降 */
+  const attrs=Object.keys(ATTRS);
+  const eligibleAttrs=attrs.filter(a=>state.player.attrs[a]>1); /* 至少保留1点 */
+  if(eligibleAttrs.length===0)return null;
+  const targetAttr=eligibleAttrs[Math.floor(Math.random()*eligibleAttrs.length)];
+  state.player.attrs[targetAttr]--;
+  return{attr:targetAttr,name:ATTRS[targetAttr].name,age:age};
+}
+
+/* 获取年龄阶段显示信息 */
+function getAgePhaseInfo(age){
+  const phase=getAgePhase(age);
+  const info={
+    youth:{name:'青年期',color:'var(--green)',desc:'成长迅速'},
+    prime:{name:'巅峰期',color:'var(--accent)',desc:'稳定成长'},
+    mature:{name:'成熟期',color:'var(--orange)',desc:'成长放缓'},
+    decline:{name:'衰退期',color:'var(--red)',desc:'属性下滑'},
+  };
+  return info[phase];
+}
+
 /* ═══ REP TIER ═══ */
 function getRepTier(r){
   for(let i=REP_TIERS.length-1;i>=0;i--){
@@ -559,7 +608,9 @@ const UI={
   updatePlayerBar(){
     if(!state)return;const p=state.player;
     document.getElementById('player-name').textContent=p.name;
-    document.getElementById('player-age').textContent=p.age+'岁';
+    /* 年龄显示包含阶段信息 */
+    const agePhase=getAgePhaseInfo(p.age);
+    document.getElementById('player-age').innerHTML=`<span style="color:${agePhase.color}">${p.age}岁</span>`;
     document.getElementById('player-pos').textContent=POSITIONS[p.position].name;
     document.getElementById('player-season').textContent='第'+state.season+'赛季';
     document.getElementById('season-progress').textContent=(()=>{const p=state.flags._seasonPlan;const i=state.flags._seasonPlanIndex;return p&&i!==undefined?'📅 '+i+'/'+p.length:''})();
@@ -880,32 +931,60 @@ async function showDiceRoll(check,opt){
   el.textContent=check.roll;el.classList.remove('rolling');if(check.isNat20)el.classList.add('nat20');if(check.isNat1)el.classList.add('nat1');
   await sleep(500);SFX.play(check.result);await UI.exitCard();
 
-  /* 属性成长（仅训练事件） */
+  /* 属性成长（仅训练事件，受年龄影响） */
   let growthMsg='';
   let growthType='';
   if(opt.canGrow){
     const growAttr=opt.compoundAttr?opt.compoundAttr.primary:opt.attribute;
     const cur=state.player.attrs[growAttr]||1;
+    const age=state.player.age;
+    const phase=getAgePhase(age);
+
     if(check.result==='critical'||check.result==='perfect'){
-      if(cur<20){state.player.attrs[growAttr]=Math.min(20,cur+2);growthMsg=`${ATTRS[growAttr].name} +2`;growthType='up'}
-      if(check.result==='critical'){
+      /* 大成功/完美：基础+2，青年期可能+3，成熟期+1，衰退期+0 */
+      const baseGrowth=phase==='mature'?1:(phase==='decline'?0:2);
+      const actualGrowth=getAgeGrowthAmount(baseGrowth,age);
+      if(cur<20&&actualGrowth>0){
+        state.player.attrs[growAttr]=Math.min(20,cur+actualGrowth);
+        growthMsg=`${ATTRS[growAttr].name} +${actualGrowth}`;
+        growthType='up';
+      }
+      /* 大成功额外奖励：体能上限+1（仅青年期和巅峰期） */
+      if(check.result==='critical'&&phase!=='decline'&&phase!=='mature'){
         const curMax=state.player.staminaMax||STAMINA_BASE;
         if(curMax<STAMINA_ABS_MAX){state.player.staminaMax=Math.min(STAMINA_ABS_MAX,curMax+1);growthMsg+=(growthMsg?' | ':'')+'体能上限 +1';if(!growthType)growthType='up'}
       }
     }else if(check.result==='success'){
-      if(cur<20){state.player.attrs[growAttr]=Math.min(20,cur+1);growthMsg=`${ATTRS[growAttr].name} +1`;growthType='up'}
+      /* 成功：基础+1，青年期1.5倍(四舍五入=1或2)，成熟期50%(四舍五入=0或1)，衰退期+0 */
+      const baseGrowth=phase==='mature'?1:(phase==='decline'?0:1);
+      const actualGrowth=getAgeGrowthAmount(baseGrowth,age);
+      if(cur<20&&actualGrowth>0){
+        state.player.attrs[growAttr]=Math.min(20,cur+actualGrowth);
+        growthMsg=`${ATTRS[growAttr].name} +${actualGrowth}`;
+        growthType='up';
+      }
     }else if(check.result==='fail'){
       if(cur>1){state.player.attrs[growAttr]=Math.max(1,cur-1);growthMsg=`${ATTRS[growAttr].name} -1`;growthType='down'}
     }else if(check.result==='fumble'){
       if(cur>1){state.player.attrs[growAttr]=Math.max(1,cur-2);growthMsg=`${ATTRS[growAttr].name} -2`;growthType='down'}
     }
-    /* 复合训练：副属性也成长 */
+    /* 复合训练：副属性也成长（同样受年龄影响） */
     if(opt.compoundGrow&&opt.compoundAttr){
       const sAttr=opt.compoundAttr.secondary;const sCur=state.player.attrs[sAttr]||1;
       if(check.result==='critical'||check.result==='perfect'){
-        if(sCur<20){state.player.attrs[sAttr]=Math.min(20,sCur+1);growthMsg+=(growthMsg?' | ':'')+`${ATTRS[sAttr].name} +1`}
+        const baseGrowth=phase==='mature'?1:(phase==='decline'?0:1);
+        const actualGrowth=getAgeGrowthAmount(baseGrowth,age);
+        if(sCur<20&&actualGrowth>0){
+          state.player.attrs[sAttr]=Math.min(20,sCur+actualGrowth);
+          growthMsg+=(growthMsg?' | ':'')+`${ATTRS[sAttr].name} +${actualGrowth}`;
+        }
       }else if(check.result==='success'){
-        if(sCur<20){state.player.attrs[sAttr]=Math.min(20,sCur+1);growthMsg+=(growthMsg?' | ':'')+`${ATTRS[sAttr].name} +1`}
+        const baseGrowth=phase==='mature'?1:(phase==='decline'?0:1);
+        const actualGrowth=getAgeGrowthAmount(baseGrowth,age);
+        if(sCur<20&&actualGrowth>0){
+          state.player.attrs[sAttr]=Math.min(20,sCur+actualGrowth);
+          growthMsg+=(growthMsg?' | ':'')+`${ATTRS[sAttr].name} +${actualGrowth}`;
+        }
       }
     }
   }
@@ -930,6 +1009,12 @@ async function showDiceRoll(check,opt){
       if(isHeavyInjured())state.injury.recoveryProgress=Math.max(0,state.injury.recoveryProgress-1);
       growthMsg='康复进度 -1';
       growthType='down';
+    }
+    /* 修复：根据更新后的进度重新检查是否康复完成 */
+    if(state.injury.recoveryProgress>=state.injury.recoveryTarget){
+      resultData.nextEvent='__recover_done';
+    }else{
+      resultData.nextEvent='recovery';
     }
   }
 
@@ -1015,6 +1100,10 @@ async function applyAndContinue(){
       state.seasonStats.reputationGain+=repChange;
     }
     else if(k==='stamina')addStamina(v);
+    else if(k==='staminaFull'){
+        /* 恢复全部体力 */
+        state.player.stamina=state.player.staminaMax||STAMINA_BASE;
+      }
     else if(k==='staminaMax'){
         const cm=state.player.staminaMax||STAMINA_BASE;
         if(cm<STAMINA_ABS_MAX)state.player.staminaMax=Math.min(STAMINA_ABS_MAX,cm+v);
@@ -1138,6 +1227,7 @@ async function startNewSeason(){
   state.season++;
   initSeasonStats();
   state.player.tags=state.player.tags.filter(t=>!t.name.includes('停赛'));
+  state.flags._restChoiceCount=0; /* 每赛季重置休息选择计数器 */
   UI.refreshAll();
   saveGame();
   await loadAndShowEvent('season_start');
@@ -1149,14 +1239,20 @@ async function showSeasonEnd(){
   const ratingResult=applySeasonRating(rating);
   const relegationResult=checkRelegation(rating);
 
+  /* 年龄增长（每赛季+1岁） */
+  state.player.age++;
+
+  /* 年龄衰退检查（31岁后） */
+  const declineResult=applyAgeDecline();
+
   UI.refreshAll();
   saveGame();
 
   /* 显示评级动画 */
-  await showRatingAnimation(rating,ratingResult,relegationResult);
+  await showRatingAnimation(rating,ratingResult,relegationResult,declineResult);
 }
 
-async function showRatingAnimation(rating,ratingResult,relegationResult){
+async function showRatingAnimation(rating,ratingResult,relegationResult,declineResult){
   const ratings=['F','D','C','B','A','S'];
   const ratingIndex=ratings.indexOf(rating);
   const ratingClasses={s:'s',a:'a',b:'b',c:'c',d:'d',f:'f'};
@@ -1169,10 +1265,14 @@ async function showRatingAnimation(rating,ratingResult,relegationResult){
     F:'💀 严重失职'
   };
 
+  /* 年龄阶段信息 */
+  const agePhaseInfo=getAgePhaseInfo(state.player.age);
+
   let html=`<div class="card-body"><div class="card-title">📊 赛季结算</div>
     <div style="margin:10px 0;font-size:12px;color:var(--dim)">
       出赛场次：${state.seasonStats.playedMatches}/${state.seasonStats.totalMatches}<br>
-      声望变化：${state.player.reputation-state.seasonStats.lastReputation>=0?'+':''}${state.player.reputation-state.seasonStats.lastReputation}
+      声望变化：${state.player.reputation-state.seasonStats.lastReputation>=0?'+':''}${state.player.reputation-state.seasonStats.lastReputation}<br>
+      <span style="color:${agePhaseInfo.color}">👤 ${state.player.age}岁 · ${agePhaseInfo.name}（${agePhaseInfo.desc}）</span>
     </div>
     <div class="rating-animation" id="rating-anim">`;
 
@@ -1188,6 +1288,11 @@ async function showRatingAnimation(rating,ratingResult,relegationResult){
     }else if(ratingResult.type==='f_penalty'){
       html+=`<div class="effect-chip effect-negative" style="margin:10px 0">💀 F级惩罚：${ratingResult.value} 声望</div>`;
     }
+  }
+
+  /* 年龄衰退提示 */
+  if(declineResult){
+    html+=`<div class="effect-chip effect-negative" style="margin:10px 0">👴 年龄衰退：${declineResult.name} -1 (${declineResult.age}岁)</div>`;
   }
 
   if(relegationResult.relegated){
@@ -1534,6 +1639,51 @@ function getRestEvent(){
   return '__temp_rest';
 }
 
+/* 强制休息事件：体力过低时触发，跳过比赛直接恢复满体力 */
+function getForcedRestEvent(){
+  const restOpt={icon:'🛌',text:'强制休息',hint:'跳过比赛 · 恢复全部体力',attribute:'mentality',dc:0,fatigue:0,art:'💤',_isOffField:true,
+    results:{critical:{narrative:'你好好休息了一天，体力完全恢复！教练也理解你的状况。',effects:{reputation:1,staminaFull:true},nextEvent:'__forced_rest_done'},
+      perfect:{narrative:'你休息得很好，体力完全恢复了。',effects:{staminaFull:true},nextEvent:'__forced_rest_done'},
+      success:{narrative:'你休息了一天，体力恢复了。',effects:{staminaFull:true},nextEvent:'__forced_rest_done'},
+      fail:{narrative:'你休息了但效果一般，不过体力还是恢复了不少。',effects:{staminaFull:true},nextEvent:'__forced_rest_done'},
+      fumble:{narrative:'你休息得不好，但还是恢复了一些体力。',effects:{staminaFull:true},nextEvent:'__forced_rest_done'}}};
+  EventRegistry.add({id:'__temp_forced_rest',stage:'rest',stageLabel:'强制休息',icon:'😴',title:'⚠️ 体力透支',
+    art:'💤',_isOffField:true,
+    narrative:'你的体能严重不足，身体已经发出警告信号。教练强制要求你休息恢复，错过接下来的比赛。',
+    options:[restOpt]});
+  return '__temp_forced_rest';
+}
+
+/* 休息选择事件：体力5-9时触发，可选择休息方式 */
+function getRestChoiceEvent(){
+  const fullRestOpt={icon:'🛌',text:'完全休息',hint:'恢复8点体力 · 无风险',attribute:'mentality',dc:0,fatigue:0,art:'💤',_isOffField:true,
+    results:{critical:{narrative:'你睡了个好觉，精力充沛！',effects:{reputation:1,stamina:8},nextEvent:'__rest_choice_done'},
+      perfect:{narrative:'休息得很好，体力恢复了不少。',effects:{stamina:8},nextEvent:'__rest_choice_done'},
+      success:{narrative:'你休息了一会儿，体力恢复了。',effects:{stamina:8},nextEvent:'__rest_choice_done'},
+      fail:{narrative:'你睡得不太好，但体力还是恢复了。',effects:{stamina:8},nextEvent:'__rest_choice_done'},
+      fumble:{narrative:'你做了噩梦，但体力还是恢复了一些。',effects:{stamina:8},nextEvent:'__rest_choice_done'}}};
+
+  const warmUpOpt={icon:'🏃',text:'热身活动',hint:'恢复3点体力 · 可能属性成长',attribute:'speed',dc:8,fatigue:0,art:'💪',_isOffField:true,canGrow:true,
+    results:{critical:{narrative:'热身效果很好！你感觉状态不错。',effects:{stamina:3},nextEvent:'__rest_choice_done'},
+      perfect:{narrative:'热身让你活动开了。',effects:{stamina:3},nextEvent:'__rest_choice_done'},
+      success:{narrative:'你完成了一些轻度活动。',effects:{stamina:3},nextEvent:'__rest_choice_done'},
+      fail:{narrative:'热身效果一般。',effects:{stamina:3},nextEvent:'__rest_choice_done'},
+      fumble:{narrative:'热身时差点拉伤！',effects:{stamina:3},nextEvent:'__rest_choice_done'}}};
+
+  const trainOpt={icon:'🔥',text:'坚持训练',hint:'无恢复 · 属性成长 · 可能受伤',attribute:'technique',dc:10,fatigue:2,art:'⚡',_isOffField:true,canGrow:true,
+    results:{critical:{narrative:'训练效果超出预期！',effects:{reputation:2},nextEvent:'__rest_choice_done'},
+      perfect:{narrative:'训练很顺利。',effects:{reputation:1},nextEvent:'__rest_choice_done'},
+      success:{narrative:'你完成了一次训练。',effects:{},nextEvent:'__rest_choice_done'},
+      fail:{narrative:'训练效果不佳。',effects:{},nextEvent:'__rest_choice_done'},
+      fumble:{narrative:'训练时差点受伤！',effects:{stamina:-2},nextEvent:'__rest_choice_done'}}};
+
+  EventRegistry.add({id:'__temp_rest_choice',stage:'rest',stageLabel:'休息选择',icon:'😴',title:'😴 体能不足',
+    art:'💤',_isOffField:true,
+    narrative:'你的体能有些不足，需要决定如何度过这段休息时间。',
+    options:[fullRestOpt,warmUpOpt,trainOpt]});
+  return '__temp_rest_choice';
+}
+
 const OPPONENTS={league:['龙城FC','星海联','钢铁城','红日竞技','蓝湾FC','飞鹰联','黑豹竞技'],derby:['死敌联','宿敌城','同城竞技','老冤家'],cup:['铁锤帮','红魔','蓝军','枪手','白鹿巷']};
 function getRandomOpponent(type){const pool=OPPONENTS[type]||OPPONENTS.league;return pool[Math.floor(Math.random()*pool.length)]}
 function getMatchContext(type){const opp=getRandomOpponent(type);const scores=['0-0','1-1','0-1','1-0','2-1','0-0 上半场'];const score=scores[Math.floor(Math.random()*scores.length)];const min=Math.floor(Math.random()*90);const stages=['开场哨刚响','比赛进入僵持','场边球迷开始躁动','比赛节奏加快'];const stage=stages[Math.floor(Math.random()*stages.length)];return {opp,score,minute:min,stage};}
@@ -1798,6 +1948,34 @@ const DEFEND_TEMPLATES={
 /* 覆盖 loadAndShowEvent 以支持赛季计划 */
 const origLoadAndShowEvent=loadAndShowEvent;
 loadAndShowEvent=async function(eventId){
+  /* 强制休息事件 */
+  if(eventId==='__forced_rest'){
+    const restEventId=getForcedRestEvent();
+    await loadAndShowEvent(restEventId);
+    return;
+  }
+  if(eventId==='__forced_rest_done'){
+    await UI.exitCard();
+    const returnEvent=state.flags._restReturn||'__continue';
+    delete state.flags._restReturn;
+    saveGame();
+    await loadAndShowEvent(returnEvent);
+    return;
+  }
+  /* 休息选择事件 */
+  if(eventId==='__rest_choice'){
+    const restChoiceEventId=getRestChoiceEvent();
+    await loadAndShowEvent(restChoiceEventId);
+    return;
+  }
+  if(eventId==='__rest_choice_done'){
+    await UI.exitCard();
+    const returnEvent=state.flags._restReturn||'__continue';
+    delete state.flags._restReturn;
+    saveGame();
+    await loadAndShowEvent(returnEvent);
+    return;
+  }
   if(eventId==='__continue'){
     /* 检查直接跳转标记（用于青训等无赛季计划的阶段） */
     const _directId=state.flags._nextDirectEvent||null;
@@ -1808,16 +1986,28 @@ loadAndShowEvent=async function(eventId){
         /* 0体能：强制停赛 */
         state.injury={type:'suspended',matchesLeft:1+Math.floor(Math.random()*3),recoveryProgress:0,recoveryTarget:0,preInjuryAttrs:null};
         state.player.reputation-=10;
+        state.flags._recoveryNext='__continue'; /* 修复：设置康复后跳转 */
         saveGame();
         await origLoadAndShowEvent('recovery');
         return;
       }
-      if(state.player.stamina<5||(state.player.stamina<10&&Math.random()<0.5)){
-        /* 体能不足：触发休息事件（保留 _nextDirectEvent 以便休息后继续） */
-        const restEventId=getRestEvent();
+      if(state.player.stamina<5){
+        /* 体力<5：强制休息，只能选择恢复体力，不能刷属性 */
+        state.flags._restReturn='__continue';
         saveGame();
-        await origLoadAndShowEvent(restEventId);
+        await loadAndShowEvent('__forced_rest');
         return;
+      }
+      if(state.player.stamina<10){
+        /* 体力5-9：可选择休息方式，每赛季最多4次 */
+        if(!state.flags._restChoiceCount)state.flags._restChoiceCount=0;
+        if(state.flags._restChoiceCount<4){
+          state.flags._restReturn='__continue';
+          state.flags._restChoiceCount++;
+          saveGame();
+          await loadAndShowEvent('__rest_choice');
+          return;
+        }
       }
     }
 
