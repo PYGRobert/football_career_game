@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, orientation=landscape">
+<title>⚽ 足球生涯 v2.0</title>
+<style>
+:root {
+  --bg:#0a0e1a;--bg-card:#131a2e;--bg-option:#1e2a4a;--bg-hover:#2a3a60;
+  --text:#e8eaf0;--dim:#7a8ab0;--bright:#fff;
+  --accent:#f0c040;--glow:#f0c04060;--green:#40d080;--red:#f05050;
+  --blue:#50a0f0;--purple:#a060f0;--orange:#f08040;
+  --radius:14px;--font:'Segoe UI',system-ui,sans-serif;
+  --segment-bg:#1a2240;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;user-select:none;-webkit-tap-highlight-color:transparent}
+#app{width:100%;height:100%;display:flex;flex-direction:column;max-width:900px;margin:0 auto;position:relative;overflow:hidden;padding:0 12px}
+@media(min-width:768px){#app{max-width:95%}}
+@media(min-width:1024px){#app{max-width:90%}}
+
+/* Top Bar */
+#top-bar{display:flex;align-items:center;gap:12px;padding:8px 12px;background:linear-gradient(180deg,#0d1220,transparent);z-index:10;flex-shrink:0}
+.stamina-bar-area{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:2px 0}
+.stamina-segments{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;width:58px}
+.stamina-block{width:10px;height:10px;border-radius:2px;background:var(--segment-bg);transition:background .3s}
+.stamina-block.filled{opacity:1}
+.stamina-text{font-size:10px;font-weight:700;white-space:nowrap}
+.player-meta{flex:1;min-width:0}
+.player-name{font-size:14px;font-weight:700;color:var(--bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-info{font-size:11px;color:var(--dim);display:flex;gap:6px;margin-top:2px}
+.top-stats{display:flex;gap:4px;flex-shrink:0;align-items:center}
+.stat-pip{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600;background:var(--bg-card);padding:4px 10px;border-radius:8px}
+.club-badge{font-size:11px;padding:4px 8px;border-radius:6px;background:linear-gradient(135deg,var(--blue),var(--purple));color:var(--bright);font-weight:700}
+
+/* Attribute Floating Button */
+.attr-btn-float{position:absolute;top:72px;right:10px;z-index:30;cursor:pointer;padding:10px 16px;border-radius:10px;background:linear-gradient(135deg,var(--bg-card),var(--bg-option));border:2px solid var(--accent);font-size:15px;font-weight:800;color:var(--accent);box-shadow:0 4px 16px rgba(240,192,64,.25);transition:all .2s;display:flex;align-items:center;gap:6px;font-family:var(--font)}
+.attr-btn-float:hover{transform:scale(1.05);box-shadow:0 6px 24px rgba(240,192,64,.4)}
+.attr-btn-float:active{transform:scale(.95)}
+
+/* Attribute Panel */
+.attr-panel{position:absolute;top:48px;left:8px;right:8px;z-index:35;background:var(--bg-card);border:2px solid var(--accent);border-radius:12px;padding:14px 16px;display:none;max-height:65vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.attr-panel.show{display:block}
+.attr-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.attr-panel-title{font-size:13px;font-weight:700;color:var(--dim);display:flex;align-items:center;gap:5px}
+.attr-panel-close{width:32px;height:32px;border-radius:8px;background:var(--bg-option);border:1.5px solid #2a3a60;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1;flex-shrink:0}
+.attr-panel-close:hover{background:var(--red);border-color:var(--red);color:var(--bright)}
+.attr-row-wrap{display:flex;align-items:center;gap:8px;padding:5px 0}
+.attr-row-icon{width:28px;height:28px;flex-shrink:0}
+.attr-row-name{font-size:12px;font-weight:600;width:32px;flex-shrink:0}
+.attr-row-segments{flex:1;display:flex;gap:2px;height:14px}
+.attr-seg{flex:1;border-radius:2px;background:var(--segment-bg);transition:background .3s}
+.attr-seg.filled{opacity:1}
+.attr-row-val{font-size:12px;font-weight:800;color:var(--accent);width:36px;text-align:right;font-variant-numeric:tabular-nums}
+.talent-section{margin-top:10px;border-top:1px solid #2a3a60;padding-top:10px}
+.talent-item{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;color:var(--blue)}
+
+/* Stage */
+#stage{flex:1;position:relative;overflow:auto;perspective:1000px;min-height:0;background:var(--bg)}
+
+/* Bottom Bar */
+#bottom-bar{padding:6px 12px 10px;background:linear-gradient(0deg,#0d1220,transparent);z-index:10;flex-shrink:0}
+.tags-row{display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap}
+.tag{font-size:11px;padding:3px 7px;border-radius:6px;background:var(--bg-option);color:var(--dim);display:flex;align-items:center;gap:3px}
+.tag.positive{background:#1a3a2a;color:var(--green)}
+.tag.negative{background:#3a1a1a;color:var(--red)}
+.tag.special{background:#2a1a3a;color:var(--purple)}
+.injury-tag{background:#3a1a1a;color:var(--red);animation:pulse 1.5s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* Cards */
+.card-container{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:12px;pointer-events:none}
+.card-container.active{pointer-events:auto}
+.game-card{width:100%;max-width:100%;background:var(--bg-card);border-radius:var(--radius);border:1.5px solid #1e2a4a;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.5);max-height:calc(100vh - 120px);overflow-y:auto}
+.game-card.entering{animation:cEnter .5s ease forwards}
+.game-card.exiting{animation:cExit .4s ease forwards}
+@keyframes cEnter{from{transform:translateX(60px) scale(.9);opacity:0}to{transform:translateX(0) scale(1);opacity:1}}
+@keyframes cExit{from{transform:translateX(0) scale(1);opacity:1}to{transform:translateX(-60px) scale(.9);opacity:0}}
+.card-art{width:100%;height:140px;background:linear-gradient(135deg,#1a2a50,#0d1a30);display:flex;align-items:center;justify-content:center;font-size:72px;position:relative;overflow:hidden}
+.card-art::after{content:'';position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(0deg,var(--bg-card),transparent)}
+.card-art-label{position:absolute;bottom:6px;left:12px;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:2px}
+.card-body{padding:14px 16px}
+.card-title{font-size:17px;font-weight:800;color:var(--bright);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.card-narrative{font-size:13px;line-height:1.8;color:var(--dim);margin-bottom:12px}
+
+/* Options */
+.options-list{display:flex;flex-direction:column;gap:5px}
+.option-btn{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;background:var(--bg-option);border:1.5px solid #2a3a60;border-radius:10px;color:var(--text);font-size:13px;cursor:pointer;transition:all .2s;text-align:left;font-family:var(--font)}
+.option-btn:hover{background:var(--bg-hover);border-color:var(--accent);transform:translateX(3px)}
+.option-btn:active{transform:scale(.98)}
+.option-icon{font-size:26px;flex-shrink:0;width:32px;text-align:center}
+.option-content{flex:1}
+.option-text{font-weight:600;font-size:13px}
+.option-hint{font-size:10px;color:var(--dim);margin-top:2px}
+.option-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.option-dc{font-size:11px;font-weight:700;padding:2px 6px;border-radius:5px;display:flex;align-items:center;gap:4px}
+.option-fatigue{font-size:10px;color:var(--orange);display:flex;align-items:center;gap:3px}
+.dc-easy{background:#1a3a2a;color:var(--green)}
+.dc-normal{background:#2a2a1a;color:var(--accent)}
+.dc-hard{background:#3a2a1a;color:var(--orange)}
+.dc-extreme{background:#3a1a1a;color:var(--red)}
+
+/* Dice */
+.dice-area{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0}
+.die{width:52px;height:52px;background:var(--bright);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:var(--bg);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.die.rolling{animation:dShake .12s ease infinite alternate}
+.die.nat20{background:linear-gradient(135deg,#f0c040,#f08040);color:#1a0a00}
+.die.nat1{background:linear-gradient(135deg,#f05050,#c03030);color:#1a0000}
+@keyframes dShake{0%{transform:rotate(-8deg) scale(1.05)}100%{transform:rotate(8deg) scale(.95)}}
+.dice-breakdown{font-size:13px;color:var(--dim);text-align:center;line-height:1.6}
+.dice-breakdown .formula{font-size:14px;color:var(--text);font-weight:700}
+.dice-breakdown .vs{color:var(--dim)}
+
+/* Result */
+.result-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 18px;border-radius:14px;font-size:15px;font-weight:800;animation:bPop .4s ease}
+@keyframes bPop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+.result-critical{background:linear-gradient(135deg,#ffd700,#ff8c00);color:#1a0a00;box-shadow:0 0 16px rgba(255,215,0,.5)}
+.result-perfect{background:linear-gradient(135deg,#ffd700,#ffaa00);color:#1a0a00;box-shadow:0 0 12px rgba(255,215,0,.4)}
+.result-success{background:linear-gradient(135deg,#40d080,#30a060);color:#001a00}
+.result-fail{background:linear-gradient(135deg,#f05050,#c03030);color:#1a0000}
+.result-fumble{background:linear-gradient(135deg,#f05050,#a02020);color:#1a0000}
+.result-effects{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0;align-items:center}
+.effect-chip{display:inline-flex;align-items:center;gap:3px;padding:5px 10px;border-radius:8px;font-size:14px;font-weight:700}
+.effect-positive{background:#1a3a2a;color:var(--green)}
+.effect-negative{background:#3a1a1a;color:var(--red)}
+.effect-neutral{background:var(--bg-option);color:var(--dim)}
+.continue-btn{display:inline-flex;align-items:center;gap:4px;padding:6px 16px;background:linear-gradient(135deg,var(--accent),var(--orange));border:none;border-radius:8px;color:#1a0a00;font-size:12px;font-weight:800;cursor:pointer;transition:transform .15s;font-family:var(--font);flex-shrink:0;white-space:nowrap}
+.continue-btn:hover{transform:scale(1.02)}
+.continue-btn:active{transform:scale(.98)}
+
+/* Screens */
+.screen{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;z-index:20;overflow-y:auto}
+.menu-title{font-size:30px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:3px}
+.menu-sub{font-size:11px;color:var(--dim);margin-bottom:28px}
+.menu-btn{width:100%;max-width:300px;padding:11px 14px;margin-bottom:7px;background:var(--bg-card);border:1.5px solid #2a3a60;border-radius:10px;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;font-family:var(--font);display:flex;align-items:center;gap:7px}
+.menu-btn:hover{border-color:var(--accent);transform:translateY(-2px)}
+.attr-title{font-size:18px;font-weight:800;color:var(--bright);margin-bottom:3px}
+.attr-sub{font-size:10px;color:var(--dim);margin-bottom:12px}
+.name-input{width:100%;max-width:300px;padding:7px 10px;background:var(--bg-option);border:1.5px solid #2a3a60;border-radius:8px;color:var(--bright);font-size:12px;font-family:var(--font);outline:none;margin-bottom:10px;text-align:center}
+.name-input:focus{border-color:var(--accent)}
+.position-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;max-width:400px;margin-bottom:10px}
+.pos-btn{padding:10px 8px;background:var(--bg-option);border:2px solid #2a3a60;border-radius:10px;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font);text-align:center}
+.pos-btn:hover{border-color:var(--accent)}
+.pos-btn.selected{border-color:var(--accent);background:var(--bg-hover);box-shadow:0 0 10px var(--glow)}
+.pos-btn .pos-icon{display:block;margin:0 auto 3px}
+.attr-grid{width:100%;max-width:500px;display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.attr-row{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg-option);border-radius:7px}
+.attr-name{font-size:12px;font-weight:600;width:32px;flex-shrink:0}
+.attr-seg-row{flex:1;display:flex;gap:2px;height:16px;align-items:center}
+.attr-alloc-seg{width:100%;max-width:28px;height:16px;border-radius:3px;background:var(--segment-bg);cursor:pointer;transition:all .15s;flex:1}
+.attr-alloc-seg:hover{transform:scaleY(1.3);filter:brightness(1.3)}
+.attr-alloc-seg.base{opacity:1}
+.attr-alloc-seg.empty{opacity:.6}
+.attr-alloc-seg.locked{opacity:.3;cursor:default}
+.attr-val{width:28px;text-align:center;font-size:13px;font-weight:800;color:var(--accent)}
+.points-left{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px}
+.start-btn{width:100%;max-width:300px;padding:11px;background:linear-gradient(135deg,var(--accent),var(--orange));border:none;border-radius:10px;color:#1a0a00;font-size:14px;font-weight:800;cursor:pointer;transition:transform .15s;font-family:var(--font)}
+.start-btn:hover{transform:scale(1.03)}
+.start-btn:disabled{opacity:.4;cursor:default;transform:none}
+
+/* Talent Select */
+.talent-select-grid{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.talent-option{padding:12px 14px;background:var(--bg-option);border:1.5px solid #2a3a60;border-radius:10px;cursor:pointer;transition:all .2s;font-family:var(--font)}
+.talent-option:hover{border-color:var(--blue);background:var(--bg-hover)}
+.talent-option-name{font-size:14px;font-weight:700;color:var(--bright);display:flex;align-items:center;gap:5px}
+.talent-option-desc{font-size:11px;color:var(--dim);margin-top:3px}
+
+/* Season Rating Animation */
+.rating-animation{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 0}
+.rating-letter{font-size:80px;font-weight:900;transition:all 0.3s ease;opacity:0.3}
+.rating-letter.current{opacity:1;transform:scale(1.2)}
+.rating-letter.s{color:var(--accent)}
+.rating-letter.a{color:var(--green)}
+.rating-letter.b{color:var(--blue)}
+.rating-letter.c{color:var(--dim)}
+.rating-letter.d{color:var(--orange)}
+.rating-letter.f{color:var(--red)}
+.rating-info{text-align:center}
+.rating-title{font-size:20px;font-weight:800;color:var(--bright);margin-bottom:5px}
+.rating-desc{font-size:13px;color:var(--dim)}
+
+/* Input Dialog */
+.input-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:100}
+.input-dialog{background:var(--bg-card);border:2px solid var(--accent);border-radius:16px;padding:24px;max-width:400px;width:90%}
+.input-dialog-title{font-size:18px;font-weight:800;color:var(--bright);margin-bottom:8px;text-align:center}
+.input-dialog-narrative{font-size:13px;color:var(--dim);margin-bottom:16px;text-align:center;line-height:1.6}
+.input-dialog-input{width:100%;padding:10px;background:var(--bg-option);border:2px solid #2a3a60;border-radius:8px;color:var(--bright);font-size:14px;font-family:var(--font);outline:none;text-align:center;margin-bottom:12px}
+.input-dialog-input:focus{border-color:var(--accent)}
+.input-dialog-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--accent),var(--orange));border:none;border-radius:10px;color:#1a0a00;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font)}
+.input-dialog-btn:hover{transform:scale(1.02)}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2a3a60;border-radius:2px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top-bar" style="display:none;">
+    <div class="stamina-bar-area" id="stamina-bar-area">
+      <div class="stamina-segments" id="stamina-segments"></div>
+      <div class="stamina-text" id="stamina-text" style="color:var(--green)">15/15</div>
+    </div>
+    <div class="player-meta">
+      <div class="player-name" id="player-name">球员</div>
+      <div class="player-info">
+        <span id="player-age">16岁</span>
+        <span id="player-pos">前锋</span>
+        <span id="player-season">第1赛季</span>
+        <span id="season-progress" style="color:var(--accent);font-size:11px">📅 -</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+      <div class="stat-pip" id="rep-pip" style="padding:4px 10px;font-size:13px"><span style="font-size:18px">😶</span><span id="stat-rep">0</span></div>
+      <div class="club-badge" id="club-badge">青训营</div>
+    </div>
+  </div>
+
+  <div class="attr-panel" id="attr-panel"></div>
+  <div class="attr-btn-float" id="attr-btn-float" onclick="toggleAttrPanel()" style="display:none">📊 球员属性</div>
+  <div id="stage">
+    </div>
+
+  <div id="bottom-bar" style="display:none;">
+    <div class="tags-row" id="tags-row"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   ICON MAP
+   ═══════════════════════════════════════════ */
+const ICON = {
+  speed:'⚡', power:'💪', technique:'🎯', awareness:'🧠', mentality:'❤️',
+  stamina:'💚', staminaMax:'🔋',
+  pos_forward:'🏃', pos_midfielder:'🎯', pos_defender:'🛡️',
+  soccer:'⚽', play:'▶️', star:'⭐', refresh:'🔄', dice:'🎲', chart:'📊',
+  injury:'🤕', tag:'🏷️', talent:'🌟',
+};
+
+function img(src,alt,size){return `<span style="font-size:${size||16}px;line-height:1;display:inline-block;vertical-align:middle">${src}</span>`}
+function attrImg(key,size){return img(ICON[key]||ICON.speed,ATTRS[key]?.name,size)}
+
+/* ═══ CONSTANTS ═══ */
+const SAVE_KEY='fc_v2_save';
+const STAMINA_BASE=15;
+const STAMINA_ABS_MAX=25;
+const ATTRS={
+  speed:{name:'速度',color:'#50d0f0'},
+  power:{name:'力量',color:'#f08040'},
+  technique:{name:'技术',color:'#f0c040'},
+  awareness:{name:'意识',color:'#a060f0'},
+  mentality:{name:'心理',color:'#f05080'}
+};
+const POSITIONS={
+  forward:{name:'前锋',desc:'终结者',attrs:{speed:3,power:1,technique:3,awareness:1},shirtNum:'7'},
+  midfielder:{name:'中场',desc:'组织者',attrs:{speed:2,power:2,technique:2,awareness:2},shirtNum:'8'},
+  defender:{name:'后卫',desc:'守护者',attrs:{speed:1,power:3,technique:1,awareness:3},shirtNum:'2'}
+};
+
+/* 声望等级（支持负数） */
+const REP_TIERS=[
+  {min:-100,name:'人人喊打',icon:'💀'},
+  {min:-50,name:'声名狼藉',icon:'😨'},
+  {min:-25,name:'名声不佳',icon:'😟'},
+  {min:0,name:'无名小卒',icon:'😶'},
+  {min:50,name:'初出茅庐',icon:'😐'},
+  {min:100,name:'小有名气',icon:'🙂'},
+  {min:150,name:'联赛新星',icon:'✨'},
+  {min:200,name:'联赛核心',icon:'⭐'},
+  {min:250,name:'国脚级',icon:'🌟'},
+  {min:500,name:'世界级',icon:'🏆'},
+];
+
+/* 俱乐部等级与倍率 */
+const CLUB_LEVELS=[
+  {id:'academy',name:'青训营',multiplier:1,minRep:0},
+  {id:'domestic_low',name:'国内次级联赛',multiplier:2,minRep:30},
+  {id:'domestic_high',name:'国内顶级联赛',multiplier:4,minRep:80},
+  {id:'europe_low',name:'欧洲次级联赛',multiplier:8,minRep:200},
+  {id:'europe_top',name:'五大联赛',multiplier:16,minRep:400},
+];
+
+/* 天赋解锁阈值 */
+const TALENT_THRESHOLDS=[20,80,250,800,2000];
+
+/* ═══ STATE ═══ */
+let state=null;
+
+function defaultState(){
+  return{
+    player:{
+      name:'新星',age:16,position:'forward',
+      attrs:{speed:1,power:1,technique:1,awareness:1,mentality:1},
+      talents:[],tags:[],
+      reputation:0,
+      stamina:STAMINA_BASE,staminaMax:STAMINA_BASE,
+    },
+    club:{level:0,name:'青训营',multiplier:1},
+    season:1,
+    currentEventId:null,
+    flags:{},
+    /* 天赋系统 */
+    lastUnlockedTier:0,
+    /* 伤病状态 */
+    injury:{type:null,matchesLeft:0,recoveryProgress:0,recoveryTarget:0,preInjuryAttrs:null},
+    /* 赛季统计 */
+    seasonStats:{
+      totalMatches:0,
+      playedMatches:0,
+      reputationGain:0,
+      fouls:0,
+      lastReputation:0,
+      cupMatches:0,
+    },
+    /* 降级追踪 */
+    relegationTracker:{consecutivePoorSeasons:0},
+    /* 历史 */
+    history:[],
+  };
+}
+
+function saveGame(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));return true}catch{return false}}
+function loadGame(){try{const d=localStorage.getItem(SAVE_KEY);if(!d)return null;state=JSON.parse(d);migrateState();return state}catch{return null}}
+function migrateState(){
+  if(state.player.stamina===undefined)state.player.stamina=STAMINA_BASE;
+  if(state.player.staminaMax===undefined)state.player.staminaMax=STAMINA_BASE;
+  if(!state.club)state.club={level:0,name:'青训营',multiplier:1};
+  if(!state.injury)state.injury={type:null,matchesLeft:0,recoveryProgress:0,recoveryTarget:0,preInjuryAttrs:null};
+  if(!state.seasonStats)state.seasonStats={totalMatches:0,playedMatches:0,reputationGain:0,fouls:0,lastReputation:state.player.reputation,cupMatches:0};
+  if(!state.relegationTracker)state.relegationTracker={consecutivePoorSeasons:0};
+  if(state.lastUnlockedTier===undefined)state.lastUnlockedTier=0;
+  if(!state.history)state.history=[];
+  state.player.staminaMax=Math.max(STAMINA_BASE,Math.min(STAMINA_ABS_MAX,state.player.staminaMax));
+  state.player.stamina=Math.max(0,Math.min(state.player.staminaMax,state.player.stamina));
+}
+function hasSave(){return!!localStorage.getItem(SAVE_KEY)}
+function clearSave(){localStorage.removeItem(SAVE_KEY)}
+function applyPositionBonus(pos){const b=POSITIONS[pos].attrs;for(const[a,v]of Object.entries(b))state.player.attrs[a]+=v}
+function addStamina(n){const mx=state.player.staminaMax||STAMINA_BASE;state.player.stamina=Math.max(0,Math.min(mx,state.player.stamina+n))}
+
+/* ═══ DICE ═══ */
+function rollD20(){return Math.floor(Math.random()*20)+1}
+function resolveCheck(attrVal,dc){
+  const roll=rollD20();
+  let result;
+  if(roll===20)result='critical';
+  else if(roll===1)result='fumble';
+  else if(roll+attrVal>=dc+5)result='perfect';
+  else if(roll+attrVal>=dc)result='success';
+  else result='fail';
+  return{roll,attrValue:attrVal,total:roll+attrVal,dc,result,isNat20:roll===20,isNat1:roll===1};
+}
+
+/* 复合属性判定：主属性×0.7 + 副属性×0.3 */
+function getCompoundAttr(primary,secondary){
+  return Math.round((getEffectiveAttr(primary)*0.7+getEffectiveAttr(secondary)*0.3)*10)/10;
+}
+function resolveCompoundCheck(primary,secondary,dc){
+  const roll=rollD20();
+  const pAttr=getEffectiveAttr(primary);
+  const sAttr=getEffectiveAttr(secondary);
+  const compound=Math.round((pAttr*0.7+sAttr*0.3)*10)/10;
+  const total=roll+compound;
+  let result;
+  if(roll===20)result='critical';
+  else if(roll===1)result='fumble';
+  else if(total>=dc+5)result='perfect';
+  else if(total>=dc)result='success';
+  else result='fail';
+  return{roll,attrValue:compound,primary:pAttr,secondary:sAttr,total,dc,result,isNat20:roll===20,isNat1:roll===1,isCompound:true,primaryKey:primary,secondaryKey:secondary};
+}
+
+/* ═══ ATTRIBUTE HELPERS ═══ */
+function getEffectiveAttr(key){return state.player.attrs[key]||1}
+
+/* ═══ REP TIER ═══ */
+function getRepTier(r){
+  for(let i=REP_TIERS.length-1;i>=0;i--){
+    if(r>=REP_TIERS[i].min)return REP_TIERS[i];
+  }
+  return REP_TIERS[0];
+}
+
+/* ═══ CLUB ═══ */
+function getClubLevel(){return CLUB_LEVELS[state.club.level]}
+function checkPromotion(){
+  const nextLevel=state.club.level+1;
+  if(nextLevel>=CLUB_LEVELS.length)return false;
+  if(state.player.reputation>=CLUB_LEVELS[nextLevel].minRep)return true;
+  return false;
+}
+function promoteClub(){
+  if(state.club.level<CLUB_LEVELS.length-1){
+    state.club.level++;
+    state.club.name=CLUB_LEVELS[state.club.level].name;
+    state.club.multiplier=CLUB_LEVELS[state.club.level].multiplier;
+    return true;
+  }
+  return false;
+}
+
+/* ═══ TALENT SYSTEM ═══ */
+const TALENTS={
+  forward:{
+    t1:[{id:'finishing',icon:'🎯',name:'门前嗅觉',desc:'终结类判定 DC-1',passive:{dcMod:{technique:-1}}},{id:'accel',icon:'💨',name:'启动加速',desc:'突破类判定 DC-1',passive:{dcMod:{speed:-1}}}],
+    t2:[{id:'killer',icon:'🔪',name:'杀手本能',desc:'大成功声望额外+3',passive:{critRepBonus:3}},{id:'dribbler',icon:'🌀',name:'盘带大师',desc:'技术判定 DC-2',passive:{dcMod:{technique:-2}}}],
+    t3:[{id:'clutch',icon:'⚡',name:'关键先生',desc:'关键比赛心理+3',passive:{bigMatchMentality:3}},{id:'aerial',icon:'🦅',name:'空霸',desc:'对抗判定 DC-2',passive:{dcMod:{power:-2}}}],
+    t4:[{id:'legend_fwd',icon:'👑',name:'传奇射手',desc:'所有进攻判定 DC-1',passive:{dcMod:{technique:-1,speed:-1}}}],
+    t5:[{id:'god_fwd',icon:'🌟',name:'球神',desc:'所有判定 DC-2',passive:{dcMod:{technique:-1,speed:-1,awareness:-1}}}],
+  },
+  midfielder:{
+    t1:[{id:'short_pass',icon:'🔗',name:'短传精准',desc:'传球判定 DC-1',passive:{dcMod:{technique:-1}}},{id:'tempo',icon:'🎵',name:'节拍器',desc:'组织判定 DC-1',passive:{dcMod:{awareness:-1}}}],
+    t2:[{id:'long_pass',icon:'🎯',name:'长传转移',desc:'意识判定 DC-2',passive:{dcMod:{awareness:-2}}},{id:'vision',icon:'👁️',name:'上帝视角',desc:'大成功声望+3',passive:{critRepBonus:3}}],
+    t3:[{id:'playmaker',icon:'🎼',name:'中场发动机',desc:'组织类判定 DC-2',passive:{dcMod:{awareness:-2,technique:-1}}},{id:'setpiece',icon:'🌀',name:'任意球专家',desc:'技术判定 DC-2',passive:{dcMod:{technique:-2}}}],
+    t4:[{id:'legend_mid',icon:'👑',name:'传奇中场',desc:'所有组织判定 DC-1',passive:{dcMod:{awareness:-1,technique:-1}}}],
+    t5:[{id:'god_mid',icon:'🌟',name:'球神',desc:'所有判定 DC-2',passive:{dcMod:{technique:-1,awareness:-1,power:-1}}}],
+  },
+  defender:{
+    t1:[{id:'tackle',icon:'🦶',name:'精准铲断',desc:'防守判定 DC-1',passive:{dcMod:{power:-1}}},{id:'positioning',icon:'📍',name:'位置感',desc:'意识判定 DC-1',passive:{dcMod:{awareness:-1}}}],
+    t2:[{id:'marking',icon:'🔒',name:'贴身盯防',desc:'对抗判定 DC-2',passive:{dcMod:{power:-2}}},{id:'heading',icon:'🦅',name:'头球解围',desc:'力量判定 DC-2',passive:{dcMod:{power:-2}}}],
+    t3:[{id:'wall',icon:'🧱',name:'铁壁',desc:'关键比赛力量+3',passive:{bigMatchPower:3}},{id:'leader',icon:'📣',name:'防线领袖',desc:'心理判定 DC-2',passive:{dcMod:{mentality:-2}}}],
+    t4:[{id:'legend_def',icon:'👑',name:'传奇后卫',desc:'所有防守判定 DC-1',passive:{dcMod:{power:-1,awareness:-1}}}],
+    t5:[{id:'god_def',icon:'🌟',name:'球神',desc:'所有判定 DC-2',passive:{dcMod:{power:-1,awareness:-1,technique:-1}}}],
+  },
+};
+
+function getAvailableTalents(pos,tier){
+  const tree=TALENTS[pos];if(!tree)return[];
+  const key='t'+tier;if(!tree[key])return[];
+  const owned=(state.player.talents||[]).map(t=>t.id);
+  return tree[key].filter(t=>!owned.includes(t.id));
+}
+
+/* 检查是否应该触发天赋解锁 */
+function checkTalentUnlock(){
+  const rep=state.player.reputation;
+  const currentTier=state.lastUnlockedTier;
+  if(currentTier>=TALENT_THRESHOLDS.length)return false;
+  if(rep>=TALENT_THRESHOLDS[currentTier])return true;
+  return false;
+}
+
+/* ═══ INJURY SYSTEM ═══ */
+function applyInjury(type,duration){
+  state.injury.type=type;
+  state.injury.matchesLeft=duration;
+  state.injury.preInjuryAttrs={...state.player.attrs};
+  /* 属性下降 */
+  const reductions={light:{speed:0,power:0,technique:0,awareness:0,mentality:0},medium:{speed:1,power:1,technique:1,awareness:0,mentality:1},heavy:{speed:3,power:3,technique:2,awareness:1,mentality:2}};
+  const r=reductions[type]||reductions.light;
+  for(const[k,v]of Object.entries(r)){
+    if(v>0)state.player.attrs[k]=Math.max(1,state.player.attrs[k]-v);
+  }
+}
+
+function startRecovery(){
+  state.injury.recoveryProgress=0;
+  state.injury.recoveryTarget=10+Math.floor(Math.random()*3); /* 10-12次康复 */
+}
+
+function completeRecovery(){
+  /* 恢复属性到重伤前 */
+  if(state.injury.preInjuryAttrs){
+    for(const k of Object.keys(ATTRS)){
+      const before=state.injury.preInjuryAttrs[k];
+      const current=state.player.attrs[k];
+      if(before>current)state.player.attrs[k]=before;
+    }
+  }
+  state.injury.type=null;
+  state.injury.matchesLeft=0;
+  state.injury.recoveryProgress=0;
+  state.injury.recoveryTarget=0;
+  state.injury.preInjuryAttrs=null;
+}
+
+function isInjured(){return state.injury.type!==null}
+function isHeavyInjured(){return state.injury.type==='heavy'}
+function isMediumInjured(){return state.injury.type==='medium'}
+
+/* ═══ SEASON STATS ═══ */
+function initSeasonStats(){
+  state.seasonStats={
+    totalMatches:0,playedMatches:0,reputationGain:0,fouls:0,
+    lastReputation:state.player.reputation,cupMatches:0,
+  };
+}
+
+function recordMatch(isCup=false){
+  state.seasonStats.totalMatches++;
+  if(!isCup)state.seasonStats.playedMatches++;
+  else state.seasonStats.cupMatches++;
+  /* 伤病倒计时：每场比赛减1，归零自动清除轻伤/停赛 */
+  if(state.injury.type&&state.injury.matchesLeft>0){
+    state.injury.matchesLeft--;
+    if(state.injury.matchesLeft<=0&&state.injury.type!=='medium'&&state.injury.type!=='heavy'){
+      state.injury.type=null;
+      state.injury.matchesLeft=0;
+    }
+  }
+}
+
+function calculateSeasonRating(){
+  const s=state.seasonStats;
+  const attendance=s.totalMatches>0?s.playedMatches/s.totalMatches:0;
+  const repGain=state.player.reputation-s.lastReputation;
+  if(attendance>0.8&&repGain>50)return 'S';
+  if(attendance>0.7&&repGain>20)return 'A';
+  if(attendance>0.6)return 'B';
+  if(attendance>0.5)return 'C';
+  if(attendance>0.3)return 'D';
+  return 'F';
+}
+
+function applySeasonRating(rating){
+  const multiplier=getClubLevel().multiplier;
+  if(rating==='S'){
+    const bonus=50*multiplier;
+    state.player.reputation+=bonus;
+    return{type:'s_bonus',value:bonus};
+  }
+  if(rating==='F'){
+    state.player.reputation-=20;
+    return{type:'f_penalty',value:-20};
+  }
+  return null;
+}
+
+function checkRelegation(rating){
+  const tracker=state.relegationTracker;
+  if(rating==='F'){
+    return{relegated:true,reason:'本赛季评级F，立即降级'};
+  }
+  if(rating==='D'||rating==='F'){
+    tracker.consecutivePoorSeasons++;
+    if(tracker.consecutivePoorSeasons>=2){
+      return{relegated:true,reason:'连续2赛季表现不佳，被降级'};
+    }
+    return{relegated:false,warning:'连续'+tracker.consecutivePoorSeasons+'赛季表现不佳'};
+  }
+  tracker.consecutivePoorSeasons=0;
+  return{relegated:false};
+}
+
+/* ═══ EVENT REGISTRY ═══ */
+const EventRegistry={_e:{},add(e){this._e[e.id]=e},get(id){return this._e[id]||null}};
+
+/* ═══ UI ═══ */
+const UI={
+  stage:document.getElementById('stage'),
+  showGameUI(s){
+    document.getElementById('top-bar').style.display=s?'flex':'none';
+    document.getElementById('bottom-bar').style.display=s?'block':'none';
+    document.getElementById('attr-btn-float').style.display=s?'flex':'none';
+    if(s)updateStaminaBar();
+  },
+  updatePlayerBar(){
+    if(!state)return;const p=state.player;
+    document.getElementById('player-name').textContent=p.name;
+    document.getElementById('player-age').textContent=p.age+'岁';
+    document.getElementById('player-pos').textContent=POSITIONS[p.position].name;
+    document.getElementById('player-season').textContent='第'+state.season+'赛季';
+    document.getElementById('season-progress').textContent=(()=>{const p=state.flags._seasonPlan;const i=state.flags._seasonPlanIndex;return p&&i!==undefined?'📅 '+i+'/'+p.length:''})();
+    const tier=getRepTier(p.reputation);
+    document.getElementById('rep-pip').innerHTML=`<span style="font-size:18px">${tier.icon}</span><span>${p.reputation}</span><span style="font-size:10px;color:var(--dim)">${tier.name}</span>`;
+    document.getElementById('club-badge').textContent=state.club.name;
+  },
+  updateAttrPanel(){
+    if(!state)return;const p=state.player;
+    let html=`<div class="attr-panel-header"><div class="attr-panel-title">${img(ICON.chart,'',18)} 属性</div><div class="attr-panel-close" onclick="toggleAttrPanel()">✕</div></div>`;
+    for(const[k,def]of Object.entries(ATTRS)){
+      const val=getEffectiveAttr(k);
+      let segs='';
+      for(let i=1;i<=20;i++){
+        const filled=i<=val;
+        const bg=filled?def.color:'var(--segment-bg)';
+        segs+=`<div class="attr-seg${filled?' filled':''}" style="background:${bg}"></div>`;
+      }
+      html+=`<div class="attr-row-wrap">
+        <span class="attr-row-icon">${attrImg(k,24)}</span>
+        <span class="attr-row-name">${def.name}</span>
+        <div class="attr-row-segments">${segs}</div>
+        <span class="attr-row-val">${val}</span>
+      </div>`;
+    }
+    /* 天赋列表 */
+    if(p.talents&&p.talents.length>0){
+      html+=`<div class="talent-section"><div class="attr-panel-title">${img(ICON.talent,'',18)} 天赋</div>`;
+      for(const t of p.talents){
+        html+=`<div class="talent-item"><span>${t.icon}</span><span>${t.name}</span></div>`;
+      }
+      html+=`</div>`;
+    }
+    document.getElementById('attr-panel').innerHTML=html;
+  },
+  updateTags(){
+    const row=document.getElementById('tags-row');const p=state.player;
+    let html='';
+    for(const tag of p.tags)html+=`<span class="tag ${tag.type||''}">${tag.icon?'<span style="font-size:14px">'+tag.icon+'</span>':''} ${tag.name}</span>`;
+    /* 伤病标签 */
+    if(isInjured()){
+      const injNames={light:'轻伤',medium:'中伤',heavy:'重伤'};
+      const injText=state.injury.type==='heavy'&&state.injury.recoveryTarget>0?
+        `重伤康复中 (${state.injury.recoveryProgress}/${state.injury.recoveryTarget})`:
+        `${injNames[state.injury.type]} · 停赛${state.injury.matchesLeft}场`;
+      html+=`<span class="tag injury-tag">🤕 ${injText}</span>`;
+    }
+    row.innerHTML=html;
+  },
+  refreshAll(){this.updatePlayerBar();this.updateAttrPanel();updateStaminaBar();this.updateTags()},
+  async showCard(html){
+    /* 先清空并禁用交互 */
+    this.stage.innerHTML='';
+    await sleep(100);
+    const c=document.createElement('div');c.className='card-container active';
+    c.innerHTML=`<div class="game-card entering">${html}</div>`;
+    this.stage.appendChild(c);
+    await sleep(500);const card=c.querySelector('.game-card');if(card)card.classList.remove('entering');return c;
+  },
+  _exitPending:false,
+  async exitCard(){
+    if(this._exitPending)return;
+    this._exitPending=true;
+    const card=this.stage.querySelector('.game-card');
+    if(card){
+      card.classList.add('exiting');
+      await sleep(400);
+    }
+    this.stage.innerHTML='';
+    this._exitPending=false;
+  },
+};
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+/* ═══ SOUND EFFECTS ═══ */
+const SFX={
+  _ctx:null,
+  _get(){if(!this._ctx)this._ctx=new(window.AudioContext||window.webkitAudioContext)();return this._ctx},
+  _tone(freq,dur,type,volume){
+    try{const c=this._get();const o=c.createOscillator();const g=c.createGain();
+    o.type=type;o.frequency.value=freq;g.gain.value=volume||0.15;
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+dur);
+    o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+dur)}catch(e){}
+  },
+  dice(){
+    for(let i=0;i<12;i++){
+      const delay=i*60;
+      setTimeout(()=>this._tone(600+Math.random()*600,0.04+Math.random()*0.03,'square',0.06+Math.random()*0.04),delay);
+    }
+  },
+  critical(){const notes=[523,659,784,1047,1319];notes.forEach((f,i)=>setTimeout(()=>this._tone(f,0.25,'sine',0.15),i*100));},
+  perfect(){this._tone(880,0.2,'sine',0.12);setTimeout(()=>this._tone(1100,0.2,'sine',0.14),120);setTimeout(()=>this._tone(1320,0.3,'sine',0.12),280);},
+  success(){this._tone(660,0.15,'sine',0.1);setTimeout(()=>this._tone(880,0.2,'sine',0.12),120);},
+  fail(){this._tone(350,0.15,'sawtooth',0.08);setTimeout(()=>this._tone(250,0.15,'sawtooth',0.07),120);},
+  fumble(){this._tone(250,0.15,'sawtooth',0.1);setTimeout(()=>this._tone(180,0.15,'sawtooth',0.08),120);},
+  play(result){if(result==='critical')this.critical();else if(result==='perfect')this.perfect();else if(result==='success')this.success();else if(result==='fail')this.fail();else if(result==='fumble')this.fumble();}
+};
+function toggleAttrPanel(){document.getElementById('attr-panel').classList.toggle('show')}
+
+/* ═══ SCREENS ═══ */
+async function showMenu(){
+  UI.showGameUI(false);
+  UI.stage.innerHTML=`<div class="screen" style="background:var(--bg)">
+    <div style="margin-bottom:10px;animation:float 3s ease infinite;font-size:80px;line-height:1">⚽</div>
+    <div class="menu-title">足球生涯 v2.0</div>
+    <div class="menu-sub">D20 · 赛季 · 伤病 · 降级</div>
+    ${hasSave()?`<button class="menu-btn" onclick="continueGame()">${img(ICON.play,'',22)}继续生涯</button>`:''}
+    <button class="menu-btn" onclick="showNewGame()">${img(ICON.star,'',22)}新的开始</button>
+  </div>`;
+}
+async function continueGame(){if(!loadGame()){clearSave();showNewGame();return}UI.showGameUI(true);UI.refreshAll();await loadAndShowEvent(state.currentEventId)}
+
+/* ─── New Game ─── */
+let selectedPos='forward';let tempAttrs={};
+function showNewGame(){selectedPos='forward';tempAttrs={speed:1,power:1,technique:1,awareness:1,mentality:1};renderNewGame()}
+function renderNewGame(){
+  const bonus=POSITIONS[selectedPos].attrs;
+  let posHtml='';for(const[k,pos]of Object.entries(POSITIONS)){const sel=k===selectedPos?'selected':'';
+    posHtml+=`<div class="pos-btn ${sel}" onclick="selectPos('${k}')"><span class="pos-icon">${img(ICON['pos_'+k],'',28)}</span>${pos.name}<div style="font-size:10px;color:var(--dim);margin-top:2px">${pos.desc}</div></div>`}
+  const usedPts=Object.values(tempAttrs).reduce((a,b)=>a+b,0)-5;
+  const remain=15-usedPts;
+  let attrHtml='';for(const[k,def]of Object.entries(ATTRS)){
+    const base=tempAttrs[k]||1;const bv=bonus[k]||0;const total=base+bv;
+    let segs='';
+    for(let i=1;i<=20;i++){
+      const filled=i<=total;
+      const locked=i>10;
+      let cls='attr-alloc-seg';
+      if(filled)cls+=' base'; else if(locked)cls+=' locked'; else cls+=' empty';
+      const bg=filled?def.color:'var(--segment-bg)';
+      const extra=locked?'border:1.5px dashed rgba(255,255,255,.15);box-sizing:border-box':'';
+      const click=locked?'':` onclick="clickAttr('${k}',${i})"`;
+      segs+=`<div class="${cls}" style="background:${bg};${extra}"${click}></div>`;
+    }
+    attrHtml+=`<div class="attr-row"><span class="attr-icon">${attrImg(k,22)}</span><span class="attr-name">${def.name}</span>
+      <div class="attr-seg-row">${segs}</div>
+      <span class="attr-val">${total}</span></div>`}
+  const canStart=remain<=0;
+  UI.stage.innerHTML=`<div class="screen" style="background:var(--bg)"><div class="attr-title">创建球员</div><div class="attr-sub">点击格子分配 15 点属性 · 虚线框为未来可解锁上限</div>
+    <input class="name-input" id="name-input" placeholder="输入球员名" maxlength="8" value="新星">
+    <div class="position-grid">${posHtml}</div>
+    <div class="points-left">剩余点数: <span id="pts-left">${remain}</span></div>
+    <div class="attr-grid">${attrHtml}</div>
+    <button class="start-btn" id="start-btn" onclick="startNewGame()" ${canStart?'':'disabled'}>${canStart?'开始生涯':`还需分配 ${remain} 点`}</button></div>`;
+}
+function clickAttr(key,targetTotal){
+  const bonus=POSITIONS[selectedPos].attrs[key]||0;
+  const minBase=1;
+  const newBase=Math.max(minBase,targetTotal-bonus);
+  const curBase=tempAttrs[key]||1;
+  if(newBase===curBase)return;
+  const usedPts=Object.values(tempAttrs).reduce((a,b)=>a+b,0)-5;
+  const remain=15-usedPts;
+  const delta=newBase-curBase;
+  if(delta>0&&delta>remain)return;
+  tempAttrs[key]=newBase;
+  renderNewGame();
+}
+function selectPos(p){selectedPos=p;renderNewGame()}
+function startNewGame(){
+  const usedPts=Object.values(tempAttrs).reduce((a,b)=>a+b,0)-5;
+  if(usedPts!==15)return;
+  state=defaultState();
+  const ne=document.getElementById('name-input');
+  state.player.name=(ne&&ne.value.trim())||'新星';
+  state.player.position=selectedPos;
+  state.player.attrs={...tempAttrs};
+  applyPositionBonus(selectedPos);
+  initSeasonStats();
+  state.currentEventId='intro_01';
+  saveGame();UI.showGameUI(true);UI.refreshAll();loadAndShowEvent('intro_01');
+}
+
+/* ═══ EVENT FLOW ═══ */
+async function loadAndShowEvent(eventId){
+  if(eventId==='__season_end'){await showSeasonEnd();return}
+  if(eventId==='__next_season'){await startNewSeason();return}
+  if(eventId==='__club_transfer'){await showClubTransferDialog();return}
+  if(eventId==='__recover_stamina'){await UI.exitCard();await UI.showCard(`<div class="card-art">💤</div><div class="card-body"><div class="card-title">⚡ 体力透支</div><div class="card-narrative">你的体能已经严重透支，身体发出了强烈的警告信号。教练强制要求你停赛休养。</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin:8px 0"><span class="effect-chip effect-negative">停赛 1-3 场</span><span class="effect-chip effect-negative">声望 -10</span></div><button class="continue-btn" onclick="loadAndShowEvent('recovery')">前往康复 ▸</button></div>`);return}
+  if(eventId==='recovery'){
+    const isInjuryRecovery=isInjured()&&state.injury.type!=='suspended';
+    const isSuspended=isInjured()&&state.injury.type==='suspended';
+    const recLabel=isSuspended?'停赛期':'伤病康复';
+    const recTitle=isSuspended?'⏰ 停赛期':'🏥 伤病康复';
+    const recNarr=isSuspended?'你处于停赛期，选择如何度过。':'你需要康复训练来恢复伤势。';
+    const recArt=isSuspended?'⏳':'💪';
+    const recOpts=getRecoveryOptions();
+    EventRegistry.add({id:'__temp_recovery',stage:'recovery',stageLabel:recLabel,icon:'🏥',title:recTitle,art:recArt,
+      narrative:recNarr,options:recOpts,_ctx:'recovery'});
+    await UI.exitCard();
+    await loadAndShowEvent('__temp_recovery');
+    return;
+  }
+  if(eventId==='to_club'){
+    await UI.exitCard();
+    await UI.showCard(`<div class="card-art">🏟️</div><div class="card-body"><div class="card-title">🎉 欢迎加入俱乐部！</div><div class="card-narrative">恭喜！你成功通过青训考核，正式加入俱乐部一线队。新的赛季即将开始，去证明自己吧！</div><button class="continue-btn" onclick="loadAndShowEvent('__season_planner')">开始职业生涯 ▸</button></div>`);
+    return;
+  }
+  if(eventId==='__season_planner'){
+    /* 生成赛季计划 */
+    const totalMatches=16+Math.floor(Math.random()*9);
+    const derbyCount=2+Math.floor(Math.random()*3);
+    const cupCount=1+Math.floor(Math.random()*3);
+    const offFieldCount=3+Math.floor(Math.random()*3);
+    const leagueCount=totalMatches-derbyCount-cupCount-offFieldCount;
+
+    const eventPool=[];
+    for(let i=0;i<leagueCount;i++)eventPool.push('league_match');
+    for(let i=0;i<derbyCount;i++)eventPool.push('derby_match');
+    for(let i=0;i<cupCount;i++)eventPool.push('cup_match');
+    for(let i=0;i<offFieldCount;i++)eventPool.push('off_field');
+
+    /* 伪随机打乱 */
+    for(let i=eventPool.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [eventPool[i],eventPool[j]]=[eventPool[j],eventPool[i]];
+    }
+    /* 修正连续问题 */
+    let changed=true;
+    while(changed){
+      changed=false;
+      for(let i=2;i<eventPool.length;i++){
+        if(eventPool[i]===eventPool[i-1]&&eventPool[i-1]===eventPool[i-2]&&eventPool[i]!=='off_field'){
+          for(let j=i+1;j<eventPool.length;j++){
+            if(eventPool[j]!==eventPool[i]){
+              [eventPool[i],eventPool[j]]=[eventPool[j],eventPool[i]];
+              changed=true;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    eventPool.push('season_end');
+    state.flags._seasonPlan=eventPool;
+    state.flags._seasonPlanIndex=0;
+    saveGame();
+    /* 开始第一个事件 */
+    await loadAndShowEvent('__continue');
+    return;
+  }
+
+  const event=EventRegistry.get(eventId);
+  if(!event){
+    await UI.exitCard();
+    await UI.showCard(`<div class="card-body"><div class="card-title">🚧 事件未找到</div><div class="card-narrative">事件 "${eventId}" 尚未实现。</div><button class="continue-btn" onclick="showMenu()">返回菜单</button></div>`);
+    return;
+  }
+  console.log('loadAndShowEvent:', eventId);
+  state.currentEventId=eventId;saveGame();await UI.exitCard();
+
+  /* 检查天赋解锁 */
+  if(checkTalentUnlock()){
+    await showTalentSelect();
+    return;
+  }
+
+  if(event._ctx){event.options=getEventOptions(event._ctx)}
+
+  let optHtml='';if(event.options){for(let i=0;i<event.options.length;i++){const o=event.options[i];const dl=dcLabel(o.dc,o);const fat=o.fatigue||0;
+    const dcImg=o.dc!==undefined?`<span class="option-dc ${dl.cls}">${dl.text}${o.compoundAttr?' '+ICON[o.compoundAttr.primary]+ICON[o.compoundAttr.secondary]:''}</span>`:'';
+    const fatImg=fat>0?`<span class="option-fatigue">${img(ICON.stamina,'',13)} ${fatigueLabel(fat)}</span>`:fat<0?`<span class="option-fatigue" style="color:var(--green)">${img(ICON.stamina,'',13)} 恢复</span>`:'';
+    optHtml+=`<button class="option-btn" onclick="chooseOption(${i})"><span class="option-icon">${o.icon||'▸'}</span><div class="option-content"><div class="option-text">${o.text}</div>${o.hint?`<div class="option-hint">${o.hint}</div>`:''}</div><div class="option-right">${dcImg}${fatImg}</div></button>`}}
+  await UI.showCard(`<div class="card-art">${event.art||'⚽'}</div><div class="card-art-label">${event.stageLabel||''}</div><div class="card-body"><div class="card-title">${event.icon||'📋'} ${event.title}</div><div class="card-narrative">${event.narrative}</div><div class="options-list">${optHtml}</div></div>`);
+}
+
+let _pendingOpt=null;
+async function chooseOption(idx){
+  const event=EventRegistry.get(state.currentEventId);if(!event)return;
+  const opt=event.options[idx];if(!opt)return;_pendingOpt=opt;
+
+  /* 场下事件不计入比赛，不受伤病影响 */
+  const isOffField=event._isOffField||opt._isOffField||false;
+  const isTrial=!!event._isTrial;
+
+  /* 比赛事件检查伤病（试训不受限制） */
+  if(!isOffField && !isTrial && isInjured()){
+    if(isHeavyInjured()||isMediumInjured()){
+      /* 重伤/中伤无法参加比赛 */
+      await UI.showCard(`<div class="card-body"><div class="card-title">🤕 伤病警告</div><div class="card-narrative">你目前有伤病在身，无法参加比赛。请先进行康复训练。</div><button class="continue-btn" onclick="loadAndShowEvent('recovery')">前往康复</button></div>`);
+      return;
+    }
+    /* 轻伤：无法比赛，需先康复 */
+      await UI.showCard(`<div class="card-body"><div class="card-title">🤕 伤病警告</div><div class="card-narrative">你有轻伤在身，需要等待恢复后才能参加比赛。</div><button class="continue-btn" onclick="loadAndShowEvent('recovery')">前往康复</button></div>`);
+      return;
+  }
+
+  let attrKey=opt.attribute;let attrVal=getEffectiveAttr(attrKey);
+  let dcMod=0;
+  for(const t of(state.player.talents||[])){
+    const def=Object.values(TALENTS[state.player.position]||{}).flat().find(x=>x.id===t.id);
+    if(def&&def.passive&&def.passive.dcMod){
+      if(def.passive.dcMod[attrKey])dcMod+=def.passive.dcMod[attrKey];
+      if(opt.compoundAttr&&def.passive.dcMod[opt.compoundAttr.secondary])dcMod+=Math.round(def.passive.dcMod[opt.compoundAttr.secondary]*0.3);
+    }
+  }
+  const effDC=Math.max(1,opt.dc+dcMod);
+  let check;
+  if(opt.compoundAttr){
+    check=resolveCompoundCheck(opt.compoundAttr.primary,opt.compoundAttr.secondary,effDC);
+  }else{
+    check=resolveCheck(attrVal,effDC);
+  }
+  if(opt.fatigue)addStamina(-opt.fatigue);
+
+  /* 记录比赛（试训不计入） */
+  const _isTrial2=!!(EventRegistry.get(state.currentEventId)||{})._isTrial;
+  if(!isOffField&&!_isTrial2)recordMatch(opt._isCup||false);
+
+  await UI.exitCard();await showDiceRoll(check,opt);
+}
+
+async function showDiceRoll(check,opt){
+  const attrDef=ATTRS[opt.attribute];
+  await UI.showCard(`<div class="card-art">${opt.art||'🎲'}</div><div class="card-body"><div class="card-title">${opt.text}</div><div class="dice-area"><div class="dice-row"><div class="die rolling" id="d20">?</div></div><div class="dice-breakdown">${img(ICON.dice,'',18)} <span class="vs">DC ${check.dc}</span></div></div></div>`);
+  const el=document.getElementById('d20');SFX.dice();for(let i=0;i<10;i++){el.textContent=rollD20();await sleep(80)}
+  el.textContent=check.roll;el.classList.remove('rolling');if(check.isNat20)el.classList.add('nat20');if(check.isNat1)el.classList.add('nat1');
+  await sleep(500);SFX.play(check.result);await UI.exitCard();
+
+  /* 属性成长（仅训练事件） */
+  let growthMsg='';
+  let growthType='';
+  if(opt.canGrow){
+    const growAttr=opt.compoundAttr?opt.compoundAttr.primary:opt.attribute;
+    const cur=state.player.attrs[growAttr]||1;
+    if(check.result==='critical'||check.result==='perfect'){
+      if(cur<20){state.player.attrs[growAttr]=Math.min(20,cur+2);growthMsg=`${ATTRS[growAttr].name} +2`;growthType='up'}
+      if(check.result==='critical'){
+        const curMax=state.player.staminaMax||STAMINA_BASE;
+        if(curMax<STAMINA_ABS_MAX){state.player.staminaMax=Math.min(STAMINA_ABS_MAX,curMax+1);growthMsg+=(growthMsg?' | ':'')+'体能上限 +1';if(!growthType)growthType='up'}
+      }
+    }else if(check.result==='success'){
+      if(cur<20){state.player.attrs[growAttr]=Math.min(20,cur+1);growthMsg=`${ATTRS[growAttr].name} +1`;growthType='up'}
+    }else if(check.result==='fail'){
+      if(cur>1){state.player.attrs[growAttr]=Math.max(1,cur-1);growthMsg=`${ATTRS[growAttr].name} -1`;growthType='down'}
+    }else if(check.result==='fumble'){
+      if(cur>1){state.player.attrs[growAttr]=Math.max(1,cur-2);growthMsg=`${ATTRS[growAttr].name} -2`;growthType='down'}
+    }
+    /* 复合训练：副属性也成长 */
+    if(opt.compoundGrow&&opt.compoundAttr){
+      const sAttr=opt.compoundAttr.secondary;const sCur=state.player.attrs[sAttr]||1;
+      if(check.result==='critical'||check.result==='perfect'){
+        if(sCur<20){state.player.attrs[sAttr]=Math.min(20,sCur+1);growthMsg+=(growthMsg?' | ':'')+`${ATTRS[sAttr].name} +1`}
+      }else if(check.result==='success'){
+        if(sCur<20){state.player.attrs[sAttr]=Math.min(20,sCur+1);growthMsg+=(growthMsg?' | ':'')+`${ATTRS[sAttr].name} +1`}
+      }
+    }
+  }
+
+  /* 康复事件特殊处理 */
+  if(opt._isRecovery){
+    if(check.result==='fumble'&&isHeavyInjured()){
+      /* 重伤康复大失败 → 延长康复 */
+      state.injury.recoveryProgress=Math.max(0,state.injury.recoveryProgress-2);
+      growthMsg='康复进度 -2';
+      growthType='down';
+    }else if(check.result==='critical'||check.result==='perfect'){
+      if(isHeavyInjured())state.injury.recoveryProgress+=2;
+      else state.injury.recoveryProgress+=1;
+      growthMsg='康复进度 +'+(isHeavyInjured()?2:1);
+      growthType='up';
+    }else if(check.result==='success'){
+      state.injury.recoveryProgress+=1;
+      growthMsg='康复进度 +1';
+      growthType='up';
+    }else if(check.result==='fail'){
+      if(isHeavyInjured())state.injury.recoveryProgress=Math.max(0,state.injury.recoveryProgress-1);
+      growthMsg='康复进度 -1';
+      growthType='down';
+    }
+  }
+
+  /* 轻伤检查（试训阶段不受伤） */
+  const _isTrial=!!(EventRegistry.get(state.currentEventId)||{})._isTrial;
+  if(!opt._isRecovery&&!opt._isOffField&&!_isTrial&&check.result==='fumble'&&!isInjured()){
+	    if(opt.fatigue>=4&&Math.random()<0.25){
+	      applyInjury('heavy',3+Math.floor(Math.random()*5));
+	      startRecovery();
+	      growthMsg+=' | 重伤！赛季受严重影响！';
+	    }else if(opt.fatigue>=3&&Math.random()<0.35){
+	      applyInjury('medium',2+Math.floor(Math.random()*3));
+	      growthMsg+=' | 中伤！需要休战数场。';
+	    }else{
+	      applyInjury('light',1+Math.floor(Math.random()*2));
+	      growthMsg+=' | 轻伤！';
+	    }
+	  }
+
+  /* 犯规停赛检查（试训阶段不犯规停赛） */
+  if(!opt._isOffField&&!opt._isRecovery&&!_isTrial&&check.result==='fumble'){
+    if(!state.seasonStats)state.seasonStats={totalMatches:0,playedMatches:0,reputationGain:0,fouls:0,lastReputation:0,cupMatches:0};
+    state.seasonStats.fouls++;
+    if(state.seasonStats.fouls>=3){
+      /* 累计犯规停赛 */
+      state.injury={type:'suspended',matchesLeft:1+Math.floor(Math.random()*3),recoveryProgress:0,recoveryTarget:0,preInjuryAttrs:null};
+      state.player.reputation-=20;
+      growthMsg+=' | 犯规累积停赛！声望-20';
+    }
+  }
+
+  let resultData=opt.results[check.result];
+  /* 如果没有对应结果，使用默认结果 */
+  if(!resultData){
+    resultData={narrative:'事件发生了...',effects:{},nextEvent:'academy_01'};
+  }
+  let critBonusRep=0;
+  if(check.result==='critical'){for(const t of(state.player.talents||[])){const def=Object.values(TALENTS[state.player.position]||{}).flat().find(x=>x.id===t.id);if(def&&def.passive&&def.passive.critRepBonus)critBonusRep+=def.passive.critRepBonus}}
+
+  await showResult(check,opt,resultData,growthMsg,growthType,critBonusRep);
+}
+
+async function showResult(check,opt,resultData,growthMsg,growthType,critBonusRep){
+  const labels={critical:{text:'🎉 大成功！🎉',cls:'result-critical'},perfect:{text:'✨ 完美！✨',cls:'result-perfect'},success:{text:'成功',cls:'result-success'},fail:{text:'失败',cls:'result-fail'},fumble:{text:'大失败！',cls:'result-fumble'}};
+  const rl=labels[check.result];
+  let breakdown='';
+  if(check.isCompound){
+    const pIcon=ICON[check.primaryKey]||'';const sIcon=ICON[check.secondaryKey]||'';
+    breakdown=`${img(ICON.dice,'',18)} <span class="formula">${check.roll} + ${check.attrValue}(${pIcon}${ATTRS[check.primaryKey].name}×0.7+${sIcon}${ATTRS[check.secondaryKey].name}×0.3) = ${check.total}</span> <span class="vs">vs DC ${check.dc}</span>`;
+  }else{
+    breakdown=`${img(ICON.dice,'',18)} <span class="formula">${check.roll} + ${check.attrValue}(属性) = ${check.total}</span> <span class="vs">vs DC ${check.dc}</span>`;
+  }
+  let effHtml='';
+  if(growthMsg){
+    const gAttr=growthMsg.match(/体能上限/)?ICON.staminaMax:Object.keys(ATTRS).find(k=>growthMsg.includes(ATTRS[k].name))||'';
+    const gIcon=gAttr?ICON[gAttr]||gAttr:ICON[opt?.attribute||'speed'];
+    const gCls=growthType==='up'?'effect-positive':'effect-negative';
+    const gVal=growthMsg.replace(/.*\s/,'');
+    effHtml+=`<span class="effect-chip ${gCls}">${gIcon}${gVal}</span>`;
+  }
+  if(critBonusRep>0)effHtml+=`<span class="effect-chip effect-positive">${ICON.star}+${critBonusRep}</span>`;
+  if(resultData.effects){for(const[k,v]of Object.entries(resultData.effects)){
+    if(typeof v==='number'){const cls=v>0?'effect-positive':'effect-negative';const icon=ICON[k]||ICON.star;effHtml+=`<span class="effect-chip ${cls}">${icon}${v>0?'+':''}${v}</span>`}
+    else if(typeof v==='string')effHtml+=`<span class="effect-chip effect-neutral">🏷️${v}</span>`}}
+  if(resultData.talentUnlock)effHtml+=`<span class="effect-chip effect-positive">${ICON.talent}天赋</span>`;
+  const effectsRow=`<div style="display:flex;align-items:center;gap:6px;margin:8px 0;flex-wrap:wrap"><div class="result-effects" style="margin:0;flex:1">${effHtml}</div><button class="continue-btn" onclick="applyAndContinue()">继续 ▸</button></div>`;
+  window._pendingResult={resultData,critBonusRep,opt};
+  await UI.showCard(`<div class="card-art">${resultData.art||opt.art||'⚽'}</div><div class="card-body"><div class="card-title">${opt.text}</div><div style="margin-bottom:6px"><span class="result-badge ${rl.cls}">${rl.text}</span></div><div class="dice-breakdown" style="margin-bottom:6px">${breakdown}</div><div class="card-narrative">${resultData.narrative}</div>${effectsRow}</div>`);
+}
+
+async function applyAndContinue(){
+  console.log('applyAndContinue called', window._pendingResult);
+  const{resultData,critBonusRep,opt}=window._pendingResult;
+  if(!resultData){console.log('No resultData, returning');return;}
+
+  /* 确保 seasonStats 存在 */
+  if(!state.seasonStats)state.seasonStats={totalMatches:0,playedMatches:0,reputationGain:0,fouls:0,lastReputation:0,cupMatches:0};
+
+  if(resultData.effects){for(const[k,v]of Object.entries(resultData.effects)){
+    if(k==='reputation'){
+      const repChange=v+(critBonusRep||0);
+      state.player.reputation+=repChange;
+      state.seasonStats.reputationGain+=repChange;
+    }
+    else if(k==='stamina')addStamina(v);
+    else if(k==='staminaMax'){
+        const cm=state.player.staminaMax||STAMINA_BASE;
+        if(cm<STAMINA_ABS_MAX)state.player.staminaMax=Math.min(STAMINA_ABS_MAX,cm+v);
+      }
+      else if(ATTRS[k]&&typeof v==='number'){
+      const cur=state.player.attrs[k]||1;
+      state.player.attrs[k]=Math.min(20,Math.max(1,cur+v));
+    }
+    else if(typeof v==='string')state.player.tags.push({name:v,icon:'🏷️'})}}
+  if(!resultData.effects||!resultData.effects.reputation){
+    if(critBonusRep){
+      state.player.reputation+=critBonusRep;
+      state.seasonStats.reputationGain+=critBonusRep;
+    }
+  }
+  if(resultData.setFlags)for(const[f,v]of Object.entries(resultData.setFlags))state.flags[f]=v;
+  state.history.push({event:state.currentEventId,result:resultData.narrative?resultData.narrative.substring(0,20):'',season:state.season||1});
+  UI.refreshAll();saveGame();
+  const nextId=resultData.nextEvent;
+  console.log('nextId:', nextId);
+
+  /* 事件链映射：当前事件 → 通过 __continue 路由到的下一事件 */
+  const EVENT_CHAIN={
+    'intro_01':'academy_01',
+    'academy_01':'academy_02','academy_02':'academy_03','academy_03':'academy_04',
+    'academy_04':'academy_05','academy_05':'to_club',
+  };
+  /* 如果当前事件在链中且 nextEvent 是 __continue，设置路由标记 */
+  if(EVENT_CHAIN[state.currentEventId]&&nextId==='__continue'){
+    state.flags._nextDirectEvent=EVENT_CHAIN[state.currentEventId];
+  }
+
+  /* 康复完成检查 */
+  if(nextId==='__recover_done'){
+    completeRecovery();
+    UI.refreshAll();saveGame();
+    const orig=state.flags._recoveryNext;
+    delete state.flags._recoveryNext;
+    if(orig)await loadAndShowEvent(orig);else await loadAndShowEvent(state.currentEventId);
+    return;
+  }
+
+  /* 重伤康复中，检查进度 */
+  if(isHeavyInjured()&&state.injury.recoveryTarget>0&&state.injury.recoveryProgress>=state.injury.recoveryTarget){
+    completeRecovery();
+    UI.refreshAll();saveGame();
+  }
+
+  console.log('Calling loadAndShowEvent with:', nextId);
+  if(nextId)await loadAndShowEvent(nextId);
+  else showFinale();
+}
+
+/* ═══ TALENT SELECTION ═══ */
+async function showTalentSelect(){
+  const pos=state.player.position;
+  const tier=state.lastUnlockedTier;
+  const options=getAvailableTalents(pos,tier+1);
+  if(options.length===0){state.lastUnlockedTier++;saveGame();await loadAndShowEvent(state.currentEventId);return}
+
+  let html='';
+  for(const t of options){html+=`<div class="talent-option" onclick="pickTalent('${t.id}',${tier+1})"><div class="talent-option-name"><span style="font-size:22px">${t.icon}</span> ${t.name}</div><div class="talent-option-desc">${t.desc}</div></div>`}
+  await UI.showCard(`<div class="card-art">${img(ICON.talent,'',44)}</div><div class="card-body"><div class="card-title">${img(ICON.talent,'',18)} 天赋解锁！</div><div class="card-narrative">声望达到 ${TALENT_THRESHOLDS[tier]}，选择一项天赋永久强化你的球员。</div><div class="talent-select-grid">${html}</div></div>`);
+}
+
+async function pickTalent(id,tier){
+  const pos=state.player.position;const tree=TALENTS[pos];const key='t'+tier;
+  const def=(tree[key]||[]).find(t=>t.id===id);
+  if(def){state.player.talents.push({id:def.id,icon:def.icon,name:def.name})}
+  state.lastUnlockedTier=tier;
+  UI.refreshAll();saveGame();
+  await UI.exitCard();loadAndShowEvent(state.currentEventId);
+}
+
+/* ═══ CLUB TRANSFER ═══ */
+async function showClubTransferDialog(){
+  await UI.exitCard();
+  const pos=state.player.position;
+  const shirtNum=POSITIONS[pos].shirtNum;
+
+  const overlay=document.createElement('div');
+  overlay.className='input-overlay';
+  overlay.innerHTML=`
+    <div class="input-dialog">
+      <div class="input-dialog-title">🌍 五大联赛邀约</div>
+      <div class="input-dialog-narrative">有欧洲豪门向你抛出橄榄枝！<br>输入你想要加盟的俱乐部名称：</div>
+      <input class="input-dialog-input" id="club-name-input" placeholder="输入俱乐部名称" maxlength="20">
+      <button class="input-dialog-btn" id="club-confirm-btn">确认签约</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const input=document.getElementById('club-name-input');
+  const btn=document.getElementById('club-confirm-btn');
+
+  return new Promise(resolve=>{
+    btn.onclick=()=>{
+      const clubName=input.value.trim()||'豪门';
+      overlay.remove();
+      state.club.level=4;
+      state.club.name=clubName;
+      state.club.multiplier=CLUB_LEVELS[4].multiplier;
+      UI.refreshAll();
+      saveGame();
+
+      /* 显示欢迎事件 */
+      const welcomeTexts={
+        forward:`欢迎 ${clubName} 的新${shirtNum}号！`,
+        midfielder:`欢迎 ${clubName} 的新${shirtNum}号！`,
+        defender:`欢迎 ${clubName} 的新${shirtNum}号！`
+      };
+      UI.showCard(`<div class="card-art">🏟️</div><div class="card-body"><div class="card-title">🌍 加盟 ${clubName}</div><div class="card-narrative">${welcomeTexts[pos]}</div><button class="continue-btn" onclick="loadAndShowEvent('season_start')">继续 ▸</button></div>`);
+      resolve();
+    };
+    input.onkeydown=(e)=>{if(e.key==='Enter')btn.click()};
+  });
+}
+
+/* ═══ SEASON SYSTEM ═══ */
+async function startNewSeason(){
+  state.season++;
+  initSeasonStats();
+  state.player.tags=state.player.tags.filter(t=>!t.name.includes('停赛'));
+  UI.refreshAll();
+  saveGame();
+  await loadAndShowEvent('season_start');
+}
+
+/* ═══ SEASON END ═══ */
+async function showSeasonEnd(){
+  const rating=calculateSeasonRating();
+  const ratingResult=applySeasonRating(rating);
+  const relegationResult=checkRelegation(rating);
+
+  UI.refreshAll();
+  saveGame();
+
+  /* 显示评级动画 */
+  await showRatingAnimation(rating,ratingResult,relegationResult);
+}
+
+async function showRatingAnimation(rating,ratingResult,relegationResult){
+  const ratings=['F','D','C','B','A','S'];
+  const ratingIndex=ratings.indexOf(rating);
+  const ratingClasses={s:'s',a:'a',b:'b',c:'c',d:'d',f:'f'};
+  const ratingDescs={
+    S:'🏆 殿堂级表现！',
+    A:'⭐ 顶级表现！',
+    B:'👍 稳定发挥',
+    C:'⚠️ 表现一般',
+    D:'📉 表现不佳',
+    F:'💀 严重失职'
+  };
+
+  let html=`<div class="card-body"><div class="card-title">📊 赛季结算</div>
+    <div style="margin:10px 0;font-size:12px;color:var(--dim)">
+      出赛场次：${state.seasonStats.playedMatches}/${state.seasonStats.totalMatches}<br>
+      声望变化：${state.player.reputation-state.seasonStats.lastReputation>=0?'+':''}${state.player.reputation-state.seasonStats.lastReputation}
+    </div>
+    <div class="rating-animation" id="rating-anim">`;
+
+  for(let i=0;i<ratings.length;i++){
+    html+=`<div class="rating-letter rating-letter${ratings[i].toLowerCase()}" id="rating-${i}" style="opacity:0.2;transform:scale(0.8)">${ratings[i]}</div>`;
+  }
+
+  html+=`</div><div class="rating-info" id="rating-info" style="opacity:0"></div>`;
+
+  if(ratingResult){
+    if(ratingResult.type==='s_bonus'){
+      html+=`<div class="effect-chip effect-positive" style="margin:10px 0">🏆 S级奖励：+${ratingResult.value} 声望</div>`;
+    }else if(ratingResult.type==='f_penalty'){
+      html+=`<div class="effect-chip effect-negative" style="margin:10px 0">💀 F级惩罚：${ratingResult.value} 声望</div>`;
+    }
+  }
+
+  if(relegationResult.relegated){
+    html+=`<div class="effect-chip effect-negative" style="margin:10px 0">📉 ${relegationResult.reason}</div>`;
+  }else if(relegationResult.warning){
+    html+=`<div class="effect-chip effect-neutral" style="margin:10px 0">⚠️ ${relegationResult.warning}</div>`;
+  }
+
+  const nextAction=relegationResult.relegated?'handleRelegation()':'continueAfterSeason()';
+  html+=`<button class="continue-btn" onclick="${nextAction}" style="margin-top:15px">继续 ▸</button></div>`;
+
+  await UI.showCard(html);
+
+  /* 播放评级动画 */
+  for(let i=0;i<=ratingIndex;i++){
+    await sleep(400);
+    const el=document.getElementById('rating-'+i);
+    if(el){
+      el.style.opacity='1';
+      el.style.transform='scale(1.2)';
+      if(i>0){
+        const prev=document.getElementById('rating-'+(i-1));
+        if(prev){prev.style.opacity='0.3';prev.style.transform='scale(0.8)'}
+      }
+    }
+  }
+
+  await sleep(500);
+  const info=document.getElementById('rating-info');
+  if(info){
+    info.style.opacity='1';
+    info.innerHTML=`<div class="rating-title">${rating}级</div><div class="rating-desc">${ratingDescs[rating]}</div>`;
+  }
+}
+
+function continueAfterSeason(){
+  /* 检查是否可以升级俱乐部 */
+  if(checkPromotion()){
+    promoteClub();
+    if(state.club.level===4){
+      /* 五大联赛需要输入俱乐部名 */
+      loadAndShowEvent('__club_transfer');
+    }else{
+      UI.showCard(`<div class="card-art">🎉</div><div class="card-body"><div class="card-title">🎉 晋升！</div><div class="card-narrative">恭喜！你已晋升至 ${state.club.name}！</div><button class="continue-btn" onclick="loadAndShowEvent('__next_season')">继续 ▸</button></div>`);
+    }
+  }else{
+    loadAndShowEvent('__next_season');
+  }
+}
+
+function handleRelegation(){
+  /* 降级处理 */
+  if(state.club.level>0){
+    state.club.level--;
+    state.club.name=CLUB_LEVELS[state.club.level].name;
+    state.club.multiplier=CLUB_LEVELS[state.club.level].multiplier;
+  }
+  UI.refreshAll();
+  saveGame();
+  UI.showCard(`<div class="card-art">📉</div><div class="card-body"><div class="card-title">📉 降级</div><div class="card-narrative">你被降级至 ${state.club.name}。需要重新证明自己。</div><button class="continue-btn" onclick="loadAndShowEvent('__next_season')">继续 ▸</button></div>`);
+}
+
+/* ═══ FINALE ═══ */
+async function showFinale(){
+  const p=state.player;const pos=POSITIONS[p.position];
+  const tier=getRepTier(p.reputation);
+  let achHtml='';
+  if(state.flags.debut_goal)achHtml+='<span class="effect-chip effect-positive">⚽ 首秀进球</span>';
+  if(state.flags.league_goal)achHtml+='<span class="effect-chip effect-positive">🥅 联赛首球</span>';
+  if(state.flags.national_team)achHtml+='<span class="effect-chip effect-positive">🏳️ 国脚</span>';
+  if(state.flags.graduate_star)achHtml+='<span class="effect-chip effect-positive">⭐ 青训之星</span>';
+  let attrHtml='';for(const[k,def]of Object.entries(ATTRS)){const v=getEffectiveAttr(k);attrHtml+=`<span class="effect-chip effect-neutral">${attrImg(k,15)} ${def.name} ${v}</span>`}
+  let talHtml='';for(const t of(p.talents||[]))talHtml+=`<span class="effect-chip effect-neutral"><span style="font-size:14px">${t.icon}</span> ${t.name}</span>`;
+  await UI.exitCard();
+  await UI.showCard(`<div class="card-art">🏆</div><div class="card-body"><div class="card-title">🏆 生涯总结</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0"><div class="stat-pip" style="justify-content:center">👤 ${p.name}</div><div class="stat-pip" style="justify-content:center">${img(ICON['pos_'+p.position],'',16)} ${pos.name}</div><div class="stat-pip" style="justify-content:center">📅 ${p.age}岁</div><div class="stat-pip" style="justify-content:center">${tier.icon} ${tier.name}</div></div>
+    <div style="margin:6px 0;font-size:10px;color:var(--dim)">📊 属性</div><div class="result-effects">${attrHtml}</div>
+    <div style="margin:6px 0;font-size:10px;color:var(--dim)">🌟 天赋</div><div class="result-effects">${talHtml||'<span class="effect-chip effect-neutral">无</span>'}</div>
+    <div style="margin:6px 0;font-size:10px;color:var(--dim)">🏆 成就</div><div class="result-effects">${achHtml||'<span class="effect-chip effect-neutral">尚无成就</span>'}</div>
+    <button class="continue-btn" onclick="clearSave();showMenu()">${img(ICON.refresh,'',20)} 开始新的生涯</button></div>`);
+}
+
+/* ═══ HELPER FUNCTIONS ═══ */
+function dcLabel(dc,opt){var attr=0;if(opt&&opt.compoundAttr){attr=getCompoundAttr(opt.compoundAttr.primary,opt.compoundAttr.secondary)}else if(opt){attr=getEffectiveAttr(opt.attribute)}else{attr=1};var need=dc-attr;if(need<=0)need=0;var prob=Math.max(0,(21-need)/20);if(prob>=0.8)return{text:'超简单',cls:'dc-easy'};if(prob>=0.6)return{text:'简单',cls:'dc-easy'};if(prob>=0.4)return{text:'普通',cls:'dc-normal'};if(prob>=0.2)return{text:'困难',cls:'dc-hard'};return{text:'极难',cls:'dc-extreme'}}
+function fatigueLabel(cost){if(cost<=2)return'轻微';if(cost<=4)return'一般';return'大量'}
+function updateStaminaBar(){
+  const s=state?state.player.stamina:STAMINA_BASE;
+  const mx=state?state.player.staminaMax:STAMINA_BASE;
+  const container=document.getElementById('stamina-segments');
+  const text=document.getElementById('stamina-text');
+  if(!container)return;
+  let blocks='';
+  const color=getStaminaBlockColor(s,mx);
+  for(let i=0;i<mx;i++){
+    const filled=i<s;
+    let cls='stamina-block';
+    if(filled)cls+=' filled';
+    const bg=filled?color:'var(--segment-bg)';
+    blocks+=`<div class="${cls}" style="background:${filled?bg:'var(--segment-bg)'}"></div>`;
+  }
+  container.innerHTML=blocks;
+  const color2=staminaColor(s);
+  if(text){text.style.color=color2;text.textContent=s+'/'+mx}
+}
+function getStaminaBlockColor(stamina,maxStamina){
+  if(stamina<=0)return '#1a2240';
+  const pct=stamina/maxStamina;
+  if(pct>=.8)return '#40d080';
+  if(pct>=.55)return '#f0c040';
+  if(pct>=.3)return '#f08040';
+  return '#f05050';
+}
+function staminaColor(s){const mx=state?state.player.staminaMax:STAMINA_BASE;const pct=s/mx;if(pct>=.8)return'var(--green)';if(pct>=.55)return'var(--accent)';if(pct>=.3)return'var(--orange)';return'var(--red)'}
+
+/* ═══ EVENT GENERATION ═══ */
+function getEventOptions(context){
+  const pos=state.player.position;
+  const season=state.season;
+
+  /* 开季事件 */
+  if(context==='season_start')return getSeasonStartOptions();
+  /* 康复事件 */
+  if(context==='recovery')return getRecoveryOptions();
+  /* 场下事件 */
+  if(context==='off_field')return getOffFieldOptions();
+
+  /* 比赛事件（根据俱乐部等级调整DC） */
+  const clubLevel=state.club.level;
+  const dcBonus=clubLevel*1; /* 每升一级DC+1 */
+
+  if(context==='league_match')return getMatchOptions('league',pos,dcBonus);
+  if(context==='derby_match')return getMatchOptions('derby',pos,dcBonus);
+  if(context==='cup_match')return getMatchOptions('cup',pos,dcBonus);
+  if(context==='season_end')return [];
+
+  return getMatchOptions('league',pos,dcBonus);
+}
+
+function getSeasonStartOptions(){
+  return[
+    {icon:'💪',text:'设定本赛季目标：成为核心',hint:'心理 · 挑战',attribute:'mentality',dc:12,fatigue:0,art:'🎯',
+     results:{critical:{narrative:'教练对你的野心印象深刻："好！我给你更多机会！"',effects:{reputation:5},nextEvent:'__season_planner'},
+       perfect:{narrative:'教练点头："有志气，用表现证明。"',effects:{reputation:2},nextEvent:'__season_planner'},
+       success:{narrative:'教练说："一步一步来。"',effects:{reputation:1},nextEvent:'__season_planner'},
+       fail:{narrative:'教练皱眉："先做好基础。"',effects:{},nextEvent:'__season_planner'},
+       fumble:{narrative:'你说话太激进了，教练不太高兴。',effects:{reputation:-2},nextEvent:'__season_planner'}}},
+    {icon:'🎯',text:'稳定发挥，不犯错',hint:'稳妥',attribute:'awareness',dc:8,fatigue:0,art:'📋',
+     results:{critical:{narrative:'你的稳重让教练放心。',effects:{reputation:2},nextEvent:'__season_planner'},
+       perfect:{narrative:'你表现得很成熟。',effects:{reputation:1},nextEvent:'__season_planner'},
+       success:{narrative:'教练认可你的态度。',effects:{},nextEvent:'__season_planner'},
+       fail:{narrative:'你表现平平。',effects:{reputation:-1},nextEvent:'__season_planner'},
+       fumble:{narrative:'你紧张得说错了话。',effects:{reputation:-2},nextEvent:'__season_planner'}}},
+  ];
+}
+
+function getRecoveryOptions(){
+  const isInjuryRecovery=isInjured()&&state.injury.type!=='suspended';
+  const isSuspended=isInjured()&&state.injury.type==='suspended';
+
+  if(isSuspended){
+    return[
+      {icon:'⏰',text:'等待停赛期结束',hint:'无风险',attribute:'mentality',dc:0,fatigue:0,art:'⏳',
+       results:{critical:{narrative:'你在看台上研究对手，学到了很多。',effects:{reputation:1},nextEvent:'__recover_done'},
+         perfect:{narrative:'你利用停赛期好好休息。',effects:{},nextEvent:'__recover_done'},
+         success:{narrative:'停赛期结束，你恢复训练。',effects:{},nextEvent:'__recover_done'},
+         fail:{narrative:'你焦急地等待复出。',effects:{},nextEvent:'__recover_done'},
+         fumble:{narrative:'你因批评裁判被追加停赛。',effects:{reputation:-5},nextEvent:'__recover_done'}}},
+    ];
+  }
+
+  return[
+    {icon:'🏋️',text:'高强度康复训练',hint:'风险 · 可能恢复属性',attribute:'power',dc:12,fatigue:3,art:'💪',_isRecovery:true,
+     results:{critical:{narrative:'你在康复中表现出色！队医说恢复得很好。',effects:{reputation:2},nextEvent:state.injury.recoveryProgress>=state.injury.recoveryTarget?'__recover_done':'recovery'},
+       perfect:{narrative:'康复训练顺利完成。',effects:{reputation:1},nextEvent:state.injury.recoveryProgress>=state.injury.recoveryTarget?'__recover_done':'recovery'},
+       success:{narrative:'你完成了今天的康复训练。',effects:{},nextEvent:state.injury.recoveryProgress>=state.injury.recoveryTarget?'__recover_done':'recovery'},
+       fail:{narrative:'训练过度，伤势有些反复。',effects:{reputation:-1},nextEvent:'recovery'},
+       fumble:{narrative:'康复训练中出了意外！伤势加重！',effects:{reputation:-3},nextEvent:'recovery'}}},
+    {icon:'🧘',text:'保守康复方案',hint:'稳定 · 无风险',attribute:'mentality',dc:5,fatigue:1,art:'🌿',_isRecovery:true,
+     results:{critical:{narrative:'你耐心恢复，状态稳步提升。',effects:{},nextEvent:state.injury.recoveryProgress>=state.injury.recoveryTarget?'__recover_done':'recovery'},
+       perfect:{narrative:'保守方案很适合你。',effects:{},nextEvent:state.injury.recoveryProgress>=state.injury.recoveryTarget?'__recover_done':'recovery'},
+       success:{narrative:'你完成了康复训练。',effects:{},nextEvent:state.injury.recoveryProgress>=state.injury.recoveryTarget?'__recover_done':'recovery'},
+       fail:{narrative:'恢复进度有些慢。',effects:{},nextEvent:'recovery'},
+       fumble:{narrative:'你休息得太久，状态下滑。',effects:{reputation:-1},nextEvent:'recovery'}}},
+  ];
+}
+
+function getOffFieldOptions(){
+  const allEvents=[
+    {icon:'🏠',text:'更衣室聊天',hint:'社交 · 心理',attribute:'mentality',dc:10,fatigue:0,art:'👥',_isOffField:true,
+     results:{critical:{narrative:'你和队友们打成一片。',effects:{reputation:3},nextEvent:'__continue'},
+       perfect:{narrative:'你和大家聊得很开心。',effects:{reputation:1},nextEvent:'__continue'},
+       success:{narrative:'你交到了几个朋友。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你不太擅长聊天。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你说错了话。',effects:{reputation:-2},nextEvent:'__continue'}}},
+    {icon:'🎤',text:'媒体采访',hint:'公众形象 · 意识',attribute:'awareness',dc:11,fatigue:0,art:'📺',_isOffField:true,
+     results:{critical:{narrative:'你的回答赢得媒体好感！',effects:{reputation:5},nextEvent:'__continue'},
+       perfect:{narrative:'你表现得很专业。',effects:{reputation:2},nextEvent:'__continue'},
+       success:{narrative:'采访顺利完成。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你说了一些不该说的话。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你的言论被断章取义！',effects:{reputation:-5},nextEvent:'__continue'}}},
+    {icon:'💼',text:'商业活动',hint:'声望 · 技术',attribute:'technique',dc:10,fatigue:1,art:'🤝',_isOffField:true,
+     results:{critical:{narrative:'商业活动非常成功！',effects:{reputation:6},nextEvent:'__continue'},
+       perfect:{narrative:'活动顺利完成。',effects:{reputation:3},nextEvent:'__continue'},
+       success:{narrative:'你完成了商业活动。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'活动效果一般。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你在活动中出了丑。',effects:{reputation:-3},nextEvent:'__continue'}}},
+    {icon:'🏋️',text:'个人加练',hint:'训练 · 速度',attribute:'speed',dc:10,fatigue:3,art:'🏃',_isOffField:true,canGrow:true,
+     results:{critical:{narrative:'加练效果显著！',effects:{reputation:2},nextEvent:'__continue'},
+       perfect:{narrative:'你练得很刻苦。',effects:{reputation:1},nextEvent:'__continue'},
+       success:{narrative:'完成了一次不错的训练。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'训练效果不佳。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'训练时差点受伤。',effects:{reputation:-1},nextEvent:'__continue'}}},
+    {icon:'❤️',text:'球迷互动',hint:'公众形象 · 心理',attribute:'mentality',dc:9,fatigue:0,art:'🤝',_isOffField:true,
+     results:{critical:{narrative:'你收获了一大批铁粉！',effects:{reputation:4},nextEvent:'__continue'},
+       perfect:{narrative:'球迷们很开心。',effects:{reputation:2},nextEvent:'__continue'},
+       success:{narrative:'你和球迷们合了影。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你有些心不在焉。',effects:{reputation:-1},nextEvent:'__continue'},
+       fumble:{narrative:'你拒绝了小球迷签名。',effects:{reputation:-3},nextEvent:'__continue'}}},
+    {icon:'🍽️',text:'球队聚餐',hint:'社交 · 力量',attribute:'power',dc:8,fatigue:0,art:'🍻',_isOffField:true,
+     results:{critical:{narrative:'你在聚餐中展现了领导力！',effects:{reputation:3},nextEvent:'__continue'},
+       perfect:{narrative:'聚餐气氛很好。',effects:{reputation:1},nextEvent:'__continue'},
+       success:{narrative:'你和队友们吃了顿好的。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'你吃得太多不舒服。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你喝多了第二天迟到。',effects:{reputation:-2},nextEvent:'__continue'}}},
+    {icon:'📚',text:'观看比赛录像',hint:'意识 · 战术',attribute:'awareness',dc:9,fatigue:1,art:'📺',_isOffField:true,canGrow:true,
+     results:{critical:{narrative:'你发现了对手弱点！',effects:{reputation:2},nextEvent:'__continue'},
+       perfect:{narrative:'你认真分析了比赛。',effects:{reputation:1},nextEvent:'__continue'},
+       success:{narrative:'你看完了录像。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'你看着看着睡着了。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你看错了录像。',effects:{},nextEvent:'__continue'}}},
+    {icon:'🤝',text:'慈善活动',hint:'声望 · 心理',attribute:'mentality',dc:8,fatigue:0,art:'❤️',_isOffField:true,
+     results:{critical:{narrative:'你的善举上了新闻！',effects:{reputation:5},nextEvent:'__continue'},
+       perfect:{narrative:'慈善活动很成功。',effects:{reputation:2},nextEvent:'__continue'},
+       success:{narrative:'你参加了慈善活动。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'活动不太顺利。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你被拍到玩手机。',effects:{reputation:-3},nextEvent:'__continue'}}},
+    {icon:'🩺',text:'伤病预防训练',hint:'身体保养',attribute:'speed',dc:8,fatigue:1,art:'🏥',_isOffField:true,
+     results:{critical:{narrative:'你学会了保护身体！',effects:{stamina:2},nextEvent:'__continue'},
+       perfect:{narrative:'预防训练很有效。',effects:{stamina:1},nextEvent:'__continue'},
+       success:{narrative:'你完成了预防训练。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'训练效果一般。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你拉伸时差点拉伤。',effects:{},nextEvent:'__continue'}}},
+    {icon:'😴',text:'额外休息',hint:'恢复体力 · 无风险',attribute:'mentality',dc:5,fatigue:-3,art:'💤',_isOffField:true,
+     results:{critical:{narrative:'你美美地睡了一整天！',effects:{reputation:1},nextEvent:'__continue'},
+       perfect:{narrative:'你休息得很好。',effects:{},nextEvent:'__continue'},
+       success:{narrative:'你多休息了一会儿。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'你没怎么睡着。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你做了噩梦。',effects:{},nextEvent:'__continue'}}},
+    {icon:'🎯',text:'射门加练',hint:'技术训练',attribute:'technique',dc:10,fatigue:2,art:'⚽',_isOffField:true,canGrow:true,
+     results:{critical:{narrative:'射门精准度大幅提升！',effects:{reputation:2},nextEvent:'__continue'},
+       perfect:{narrative:'你练了很久射门。',effects:{reputation:1},nextEvent:'__continue'},
+       success:{narrative:'你完成了射门训练。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'射门总是偏出。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你踢到了门柱，脚趾生疼。',effects:{reputation:-1},nextEvent:'__continue'}}},
+    {icon:'💪',text:'力量训练',hint:'力量训练',attribute:'power',dc:10,fatigue:3,art:'🏋️',_isOffField:true,canGrow:true,
+     results:{critical:{narrative:'你突破了自己的极限！',effects:{reputation:2},nextEvent:'__continue'},
+       perfect:{narrative:'力量训练效果很好。',effects:{reputation:1},nextEvent:'__continue'},
+       success:{narrative:'你完成了力量训练。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'你举得太重了。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你硬拉时伤到背！',effects:{reputation:-2},nextEvent:'__continue'}}},
+    {icon:'📱',text:'社交媒体互动',hint:'公众形象',attribute:'awareness',dc:9,fatigue:0,art:'💬',_isOffField:true,
+     results:{critical:{narrative:'你的帖子火了！粉丝暴涨！',effects:{reputation:4},nextEvent:'__continue'},
+       perfect:{narrative:'帖子得到很多点赞。',effects:{reputation:2},nextEvent:'__continue'},
+       success:{narrative:'你发了条动态。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'帖子没人关注。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你发了争议帖子被骂了！',effects:{reputation:-4},nextEvent:'__continue'}}},
+    {icon:'🎓',text:'指导青年队',hint:'心理 · 领导力',attribute:'mentality',dc:11,fatigue:1,art:'👨‍🏫',_isOffField:true,
+     results:{critical:{narrative:'你成为年轻球员的偶像！',effects:{reputation:4},nextEvent:'__continue'},
+       perfect:{narrative:'你认真指导了年轻球员。',effects:{reputation:2},nextEvent:'__continue'},
+       success:{narrative:'你分享了一些经验。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你不擅长教导别人。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你给的建议是错的。',effects:{reputation:-2},nextEvent:'__continue'}}},
+    {icon:'🧘',text:'心理辅导课',hint:'心理训练',attribute:'mentality',dc:9,fatigue:0,art:'🧠',_isOffField:true,canGrow:true,
+     results:{critical:{narrative:'你获得了巨大内心力量！',effects:{reputation:2},nextEvent:'__continue'},
+       perfect:{narrative:'心理辅导让你更自信了。',effects:{reputation:1},nextEvent:'__continue'},
+       success:{narrative:'你完成了心理辅导课。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'辅导效果不太明显。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你在辅导中情绪失控了。',effects:{},nextEvent:'__continue'}}},
+    {icon:'🏊',text:'游泳恢复训练',hint:'身体恢复',attribute:'speed',dc:7,fatigue:1,art:'🏊',_isOffField:true,
+     results:{critical:{narrative:'游泳让你全身放松！',effects:{stamina:3},nextEvent:'__continue'},
+       perfect:{narrative:'游泳恢复效果很好。',effects:{stamina:2},nextEvent:'__continue'},
+       success:{narrative:'你游了几圈。',effects:{stamina:1},nextEvent:'__continue'},
+       fail:{narrative:'你游得太累了。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你在泳池里抽筋了。',effects:{reputation:-1},nextEvent:'__continue'}}},
+    {icon:'🎵',text:'音乐放松',hint:'心理调节',attribute:'mentality',dc:6,fatigue:-2,art:'🎧',_isOffField:true,
+     results:{critical:{narrative:'音乐让你完全放松了。',effects:{reputation:1},nextEvent:'__continue'},
+       perfect:{narrative:'你放松了心情。',effects:{},nextEvent:'__continue'},
+       success:{narrative:'音乐让你好了一些。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'音乐没让你好起来。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'耳机坏了。',effects:{},nextEvent:'__continue'}}},
+    {icon:'👟',text:'球鞋代言拍摄',hint:'商业 · 技术',attribute:'technique',dc:11,fatigue:0,art:'📸',_isOffField:true,
+     results:{critical:{narrative:'拍摄效果完美！追加代言费！',effects:{reputation:5},nextEvent:'__continue'},
+       perfect:{narrative:'拍摄顺利完成。',effects:{reputation:2},nextEvent:'__continue'},
+       success:{narrative:'你拍了宣传照。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'拍摄效果一般。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你摆pose太尴尬了。',effects:{reputation:-2},nextEvent:'__continue'}}},
+    {icon:'🌍',text:'语言学习',hint:'意识 · 适应力',attribute:'awareness',dc:10,fatigue:0,art:'📖',_isOffField:true,canGrow:true,
+     results:{critical:{narrative:'你很快掌握了基本对话！',effects:{reputation:3},nextEvent:'__continue'},
+       perfect:{narrative:'你学会了常用短语。',effects:{reputation:1},nextEvent:'__continue'},
+       success:{narrative:'你开始学习新语言。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'语言太难了。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你用错了词闹笑话。',effects:{reputation:-1},nextEvent:'__continue'}}},
+    {icon:'🎮',text:'队友游戏之夜',hint:'社交 · 休息',attribute:'mentality',dc:7,fatigue:-2,art:'🎮',_isOffField:true,
+     results:{critical:{narrative:'你们玩到深夜关系更铁了！',effects:{reputation:2},nextEvent:'__continue'},
+       perfect:{narrative:'游戏之夜很欢乐。',effects:{reputation:1},nextEvent:'__continue'},
+       success:{narrative:'你和队友们玩了会儿游戏。',effects:{},nextEvent:'__continue'},
+       fail:{narrative:'你总是输。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你熬夜到凌晨精神很差。',effects:{stamina:-1},nextEvent:'__continue'}}},
+  ];
+  const shuffled=allEvents.sort(()=>Math.random()-0.5);
+  return shuffled.slice(0,2+Math.floor(Math.random()*2));
+}
+
+function getRestEvent(){
+  const attrs=Object.keys(ATTRS);
+  const primaryAttr=attrs[Math.floor(Math.random()*attrs.length)];
+  let secondaryAttr=attrs[Math.floor(Math.random()*attrs.length)];
+  while(secondaryAttr===primaryAttr)secondaryAttr=attrs[Math.floor(Math.random()*attrs.length)];
+  const restOpt={icon:'🛌',text:'充分休息',hint:'恢复体力 · 无风险 · 无成长',attribute:'mentality',dc:0,fatigue:0,art:'💤',_isOffField:true,
+    results:{critical:{narrative:'你睡了整整一天，醒来后浑身充满力量！',effects:{reputation:1,stamina:6},nextEvent:'__continue'},
+      perfect:{narrative:'你好好休息了一整天，感觉恢复了不少。',effects:{stamina:5},nextEvent:'__continue'},
+      success:{narrative:'你休息了一天，体力有所恢复。',effects:{stamina:5},nextEvent:'__continue'},
+      fail:{narrative:'你辗转反侧睡不着，但至少没有消耗体力。',effects:{stamina:3},nextEvent:'__continue'},
+      fumble:{narrative:'你做了噩梦，醒来反而更累了。',effects:{stamina:2},nextEvent:'__continue'}}};
+  const lightOpt={icon:'🏃',text:'轻度训练',hint:'少量恢复 · 单项属性成长',attribute:primaryAttr,dc:8,fatigue:0,art:'💪',_isOffField:true,canGrow:true,
+    results:{critical:{narrative:'训练效果超出预期！你感觉状态极佳。',effects:{stamina:2},nextEvent:'__continue'},
+      perfect:{narrative:'训练很顺利，身体和技能都有提升。',effects:{stamina:1},nextEvent:'__continue'},
+      success:{narrative:'你完成了一次不错的训练。',effects:{stamina:1},nextEvent:'__continue'},
+      fail:{narrative:'训练效果一般，但至少没有受伤。',effects:{},nextEvent:'__continue'},
+      fumble:{narrative:'训练时差点拉伤，你赶紧停下了。',effects:{},nextEvent:'__continue'}}};
+  const fullOpt={icon:'🔥',text:'全力训练',hint:'无恢复 · 双项属性成长 · 可能受伤',attribute:primaryAttr,dc:12,fatigue:2,art:'⚡',_isOffField:true,canGrow:true,
+    compoundAttr:{primary:primaryAttr,secondary:secondaryAttr},compoundGrow:true,
+    results:{critical:{narrative:'你在训练中展现了惊人的实力！教练为你鼓掌！',effects:{reputation:2},nextEvent:'__continue'},
+      perfect:{narrative:'训练效果非常好，你的能力全面提升。',effects:{},nextEvent:'__continue'},
+      success:{narrative:'你完成了高强度训练，有所收获。',effects:{},nextEvent:'__continue'},
+      fail:{narrative:'训练太拼命了，你感觉身体有些吃不消。',effects:{},nextEvent:'__continue'},
+      fumble:{narrative:'全力训练中你拉伤了肌肉！',effects:{reputation:-2},nextEvent:'__continue'}}};
+  const st=state.player.stamina;
+  const opts=st<=0?[restOpt]:[restOpt,lightOpt,fullOpt];
+  EventRegistry.add({id:'__temp_rest',stage:'rest',stageLabel:'训练课',icon:'🏋️',title:st<=0?'⚠️ 体力透支':'训练课',
+    art:'💪',_isOffField:true,
+    narrative:st<=0?'你的体能已经完全耗尽，必须立刻休息！身体不允许再做任何训练。':'教练安排了训练课，你可以根据自己的状态选择训练强度。',
+    options:opts});
+  return '__temp_rest';
+}
+
+const OPPONENTS={league:['龙城FC','星海联','钢铁城','红日竞技','蓝湾FC','飞鹰联','黑豹竞技'],derby:['死敌联','宿敌城','同城竞技','老冤家'],cup:['铁锤帮','红魔','蓝军','枪手','白鹿巷']};
+function getRandomOpponent(type){const pool=OPPONENTS[type]||OPPONENTS.league;return pool[Math.floor(Math.random()*pool.length)]}
+function getMatchContext(type){const opp=getRandomOpponent(type);const scores=['0-0','1-1','0-1','1-0','2-1','0-0 上半场'];const score=scores[Math.floor(Math.random()*scores.length)];const min=Math.floor(Math.random()*90);const stages=['开场哨刚响','比赛进入僵持','场边球迷开始躁动','比赛节奏加快'];const stage=stages[Math.floor(Math.random()*stages.length)];return {opp,score,minute:min,stage};}
+function getMatchOptions(type,pos,dcBonus){
+  const isDerby=type==='derby';
+  const isCup=type==='cup';
+  const baseDC=10+dcBonus+(isDerby?2:0);
+  const nextEvent='__continue';
+  const matchLabel=isDerby?'德比战':isCup?'杯赛':'联赛';
+  return getRandomMatchOptions(baseDC,nextEvent,matchLabel,pos);
+}
+function getRandomMatchOptions(dc,next,label,pos){
+  const atkT=ATTACK_TEMPLATES[pos]||ATTACK_TEMPLATES.forward;
+  const supT=SUPPORT_TEMPLATES[pos]||SUPPORT_TEMPLATES.forward;
+  const defT=DEFEND_TEMPLATES[pos]||DEFEND_TEMPLATES.forward;
+  const atk=atkT[Math.floor(Math.random()*atkT.length)];
+  const sup=supT[Math.floor(Math.random()*supT.length)];
+  const def=defT[Math.floor(Math.random()*defT.length)];
+  const allPool=[...atkT,...supT,...defT];
+  const unpicked=allPool.filter(t=>t!==atk&&t!==sup&&t!==def);
+	  const extra=unpicked.length>0?unpicked[Math.floor(Math.random()*unpicked.length)]:allPool[Math.floor(Math.random()*allPool.length)];
+  const safeOpt={icon:'🛡️',text:'只传安全球不犯错',hint:'保守 · 不消耗体力',attribute:'awareness',dc:8,fatigue:0,art:'🛡️',_isCup:label==='杯赛',
+    results:{critical:{narrative:'你处理球很稳健。',effects:{},nextEvent:next},
+      perfect:{narrative:'你没犯错也没亮点。',effects:{},nextEvent:next},
+      success:{narrative:'你安全踢完了比赛。',effects:{},nextEvent:next},
+      fail:{narrative:'你太保守了！',effects:{reputation:-2},nextEvent:next},
+      fumble:{narrative:'你传安全球却传给了对手！',effects:{reputation:-5},nextEvent:next}}};
+  return[atk,sup,def,extra,safeOpt].map(o=>({...o,dc:o.dc+dc-10,_isCup:label==='杯赛'}));
+}
+const ATTACK_TEMPLATES={
+  forward:[
+    {icon:'⚡',text:'抓住机会一击致命',hint:'终结 · 高风险',attribute:'technique',dc:12,fatigue:3,art:'🎯',
+     results:{critical:{narrative:'你弧线球破门！全场沸腾！',effects:{reputation:12,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你冷静射门得分！',effects:{reputation:6,mentality:1},nextEvent:'__continue'},
+       success:{narrative:'射门擦柱而出！',effects:{reputation:2},nextEvent:'__continue'},
+       fail:{narrative:'你没能把握机会。',effects:{reputation:-3},nextEvent:'__continue'},
+       fumble:{narrative:'射门踢飞了！',effects:{reputation:-6},nextEvent:'__continue'}}},
+    {icon:'🦅',text:'头球攻门',hint:'力量 · 制空',attribute:'power',dc:12,fatigue:2,art:'💪',
+     results:{critical:{narrative:'你头球破门！解说员疯狂了！',effects:{reputation:10,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你的头球很有威胁。',effects:{reputation:5},nextEvent:'__continue'},
+       success:{narrative:'你争到头球但顶偏了。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你没争到头球。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你头球撞到门柱！',effects:{reputation:-4},nextEvent:'__continue'}}},
+    {icon:'🎯',text:'精准射门',hint:'技术 · 精准',attribute:'technique',dc:13,fatigue:2,art:'🎯',
+     results:{critical:{narrative:'你射门直入死角！世界波！',effects:{reputation:14,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你的射门精准有力。',effects:{reputation:7},nextEvent:'__continue'},
+       success:{narrative:'射门被扑出了。',effects:{reputation:2},nextEvent:'__continue'},
+       fail:{narrative:'射门偏了。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你射门时滑倒了。',effects:{reputation:-5},nextEvent:'__continue'}}},
+    {icon:'🏃',text:'反越位单刀',hint:'速度 · 意识',attribute:'speed',dc:12,fatigue:3,art:'💨',
+     compoundAttr:{primary:'speed',secondary:'awareness'},
+     results:{critical:{narrative:'你单刀冷静推射入网！',effects:{reputation:12,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你的跑位很精准。',effects:{reputation:6},nextEvent:'__continue'},
+       success:{narrative:'你启动了但被追上。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你越位了。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你启动太慢被断球。',effects:{reputation:-4},nextEvent:'__continue'}}},
+    {icon:'🌀',text:'盘带突破射门',hint:'技术 · 速度',attribute:'technique',dc:13,fatigue:4,art:'🌀',
+     compoundAttr:{primary:'technique',secondary:'speed'},
+     results:{critical:{narrative:'你晃过三人后射门得分！',effects:{reputation:15,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你盘带突破后射门进球！',effects:{reputation:8},nextEvent:'__continue'},
+       success:{narrative:'你突破了但射门被扑。',effects:{reputation:2},nextEvent:'__continue'},
+       fail:{narrative:'你盘带时被断球。',effects:{reputation:-3},nextEvent:'__continue'},
+       fumble:{narrative:'你花式过人失败。',effects:{reputation:-5},nextEvent:'__continue'}}},
+  ],
+  midfielder:[
+    {icon:'🔗',text:'送出致命直塞',hint:'传球 · 高风险',attribute:'technique',dc:12,fatigue:3,art:'🎯',
+     results:{critical:{narrative:'你送出精妙直塞！助攻！',effects:{reputation:10,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你的传球很精准。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'传球到位了。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'直塞被断。',effects:{reputation:-3},nextEvent:'__continue'},
+       fumble:{narrative:'回传失误导致丢球！',effects:{reputation:-6},nextEvent:'__continue'}}},
+    {icon:'💥',text:'远射破门',hint:'力量 · 技术',attribute:'power',dc:13,fatigue:2,art:'🔥',
+     compoundAttr:{primary:'power',secondary:'technique'},
+     results:{critical:{narrative:'30米外世界波！全场沸腾！',effects:{reputation:12,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'远射很有威胁。',effects:{reputation:6},nextEvent:'__continue'},
+       success:{narrative:'远射被扑出。',effects:{reputation:2},nextEvent:'__continue'},
+       fail:{narrative:'远射飞了。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'远射踢疵了。',effects:{reputation:-4},nextEvent:'__continue'}}},
+    {icon:'🎯',text:'精准长传转移',hint:'技术 · 视野',attribute:'technique',dc:12,fatigue:2,art:'🔗',
+     results:{critical:{narrative:'长传直接制造进球！',effects:{reputation:8,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'长传转移很到位。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你完成了转移球。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'长传力量太大。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'长传直接给了对手。',effects:{reputation:-4},nextEvent:'__continue'}}},
+    {icon:'🏃',text:'带球推进',hint:'速度 · 盘带',attribute:'speed',dc:11,fatigue:3,art:'💨',
+     results:{critical:{narrative:'你从后场推进到前场！',effects:{reputation:8},nextEvent:'__continue'},
+       perfect:{narrative:'你的推进撕开防线。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你推进了一段距离。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'推进中被断球。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你踩到球摔倒了。',effects:{reputation:-4},nextEvent:'__continue'}}},
+    {icon:'🧠',text:'关键传球',hint:'意识 · 组织',attribute:'awareness',dc:12,fatigue:2,art:'🧠',
+     results:{critical:{narrative:'手术刀般的传球！助攻！',effects:{reputation:10,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'传球找到空位队友。',effects:{reputation:5},nextEvent:'__continue'},
+       success:{narrative:'你传出一脚不错的球。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'传球意图被识破。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'传球力量太小被截获。',effects:{reputation:-4},nextEvent:'__continue'}}},
+  ],
+  defender:[
+    {icon:'🛡️',text:'关键铲断',hint:'力量 · 防守',attribute:'power',dc:12,fatigue:3,art:'🦶',
+     results:{critical:{narrative:'飞身铲断干净利落！',effects:{reputation:10,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你稳稳断下球。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你完成了防守。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'铲断慢了一步。',effects:{reputation:-3},nextEvent:'__continue'},
+       fumble:{narrative:'铲球犯规送任意球！',effects:{reputation:-6},nextEvent:'__continue'}}},
+    {icon:'🦅',text:'头球解围',hint:'力量 · 制空',attribute:'power',dc:11,fatigue:2,art:'💪',
+     results:{critical:{narrative:'头球解围还发动反击！',effects:{reputation:6},nextEvent:'__continue'},
+       perfect:{narrative:'争顶成功解围。',effects:{reputation:3},nextEvent:'__continue'},
+       success:{narrative:'你把球顶出危险区。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你没争到球。',effects:{reputation:-3},nextEvent:'__continue'},
+       fumble:{narrative:'你和队友撞一起！',effects:{reputation:-5},nextEvent:'__continue'}}},
+    {icon:'🧱',text:'飞身封堵',hint:'力量 · 心理',attribute:'power',dc:14,fatigue:3,art:'🧱',
+     compoundAttr:{primary:'power',secondary:'mentality'},
+     results:{critical:{narrative:'飞身堵枪眼！保住球门！',effects:{reputation:12,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你勇敢封堵了射门。',effects:{reputation:6},nextEvent:'__continue'},
+       success:{narrative:'你挡住了射门。',effects:{reputation:2},nextEvent:'__continue'},
+       fail:{narrative:'你没来得及封堵。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你封堵时被打到脸。',effects:{reputation:-3},nextEvent:'__continue'}}},
+    {icon:'📍',text:'精准预判断球',hint:'意识 · 位置感',attribute:'awareness',dc:11,fatigue:2,art:'🧠',
+     results:{critical:{narrative:'预判断球发动反击！助攻！',effects:{reputation:8,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你提前卡住位置。',effects:{reputation:3},nextEvent:'__continue'},
+       success:{narrative:'你判断对了方向。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你被假动作骗过。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你完全判断错方向！',effects:{reputation:-5},nextEvent:'__continue'}}},
+    {icon:'🏃',text:'回追防守',hint:'速度 · 防守',attribute:'speed',dc:12,fatigue:3,art:'💨',
+     results:{critical:{narrative:'你门线上把球救了回来！',effects:{reputation:10,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你及时回追化解危机。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你回追到位了。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你回追不够快。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你在回追中滑倒了。',effects:{reputation:-4},nextEvent:'__continue'}}},
+  ],
+};
+const SUPPORT_TEMPLATES={
+  forward:[
+    {icon:'🎯',text:'为队友做球',hint:'意识 · 团队',attribute:'awareness',dc:11,fatigue:2,art:'🔗',
+     results:{critical:{narrative:'队友轻松破门！助攻！',effects:{reputation:6,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你的做球很到位。',effects:{reputation:3},nextEvent:'__continue'},
+       success:{narrative:'你完成了战术任务。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'跑位和队友不默契。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你跑错了位置。',effects:{reputation:-4},nextEvent:'__continue'}}},
+    {icon:'🏃',text:'拉边策应',hint:'速度 · 意识',attribute:'speed',dc:10,fatigue:2,art:'💨',
+     results:{critical:{narrative:'你的拉边撕开了防线！',effects:{reputation:5},nextEvent:'__continue'},
+       perfect:{narrative:'拉边创造了空间。',effects:{reputation:2},nextEvent:'__continue'},
+       success:{narrative:'你完成了拉边。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你没接到球。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你越位了。',effects:{reputation:-2},nextEvent:'__continue'}}},
+    {icon:'🤝',text:'二过一配合',hint:'技术 · 意识',attribute:'technique',dc:11,fatigue:2,art:'🔗',
+     compoundAttr:{primary:'technique',secondary:'awareness'},
+     results:{critical:{narrative:'精妙二过一你射门得分！',effects:{reputation:8,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'二过一配合成功。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'配合基本完成。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'传球力量不对。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你和队友跑到一起了。',effects:{reputation:-3},nextEvent:'__continue'}}},
+  ],
+  midfielder:[
+    {icon:'🎵',text:'掌控比赛节奏',hint:'意识 · 组织',attribute:'awareness',dc:11,fatigue:2,art:'🎼',
+     results:{critical:{narrative:'你完美掌控节奏！全场最佳！',effects:{reputation:8,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'组织让球队流畅运转。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你完成了组织任务。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'对手逼抢让你失误。',effects:{reputation:-3},nextEvent:'__continue'},
+       fumble:{narrative:'你被断球对手反击。',effects:{reputation:-5},nextEvent:'__continue'}}},
+    {icon:'🔗',text:'短传配合',hint:'技术 · 稳定',attribute:'technique',dc:10,fatigue:1,art:'🎯',
+     results:{critical:{narrative:'短传配合行云流水！',effects:{reputation:5},nextEvent:'__continue'},
+       perfect:{narrative:'你的传球很稳定。',effects:{reputation:2},nextEvent:'__continue'},
+       success:{narrative:'你完成了基本传球。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'传球被断了。',effects:{reputation:-1},nextEvent:'__continue'},
+       fumble:{narrative:'传球直接给了对手。',effects:{reputation:-3},nextEvent:'__continue'}}},
+    {icon:'🧠',text:'组织进攻',hint:'意识 · 技术',attribute:'awareness',dc:12,fatigue:2,art:'🧠',
+     compoundAttr:{primary:'awareness',secondary:'technique'},
+     results:{critical:{narrative:'全队进攻如行云流水！',effects:{reputation:8},nextEvent:'__continue'},
+       perfect:{narrative:'组织进攻很有威胁。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你组织了一次进攻。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'组织被对手看穿了。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'传球选择很糟糕。',effects:{reputation:-4},nextEvent:'__continue'}}},
+  ],
+  defender:[
+    {icon:'💪',text:'回防补位',hint:'力量 · 防守',attribute:'power',dc:11,fatigue:3,art:'🛡️',
+     results:{critical:{narrative:'关键铲断阻止必进球！',effects:{reputation:6,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你的回防很及时。',effects:{reputation:3},nextEvent:'__continue'},
+       success:{narrative:'你完成了防守。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'回防不够及时。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'防守犯规送点球！',effects:{reputation:-5},nextEvent:'__continue'}}},
+    {icon:'🔗',text:'后场出球',hint:'技术 · 意识',attribute:'technique',dc:10,fatigue:1,art:'🎯',
+     results:{critical:{narrative:'长传直接找到前场队友！',effects:{reputation:5},nextEvent:'__continue'},
+       perfect:{narrative:'你的出球很稳定。',effects:{reputation:2},nextEvent:'__continue'},
+       success:{narrative:'你完成了出球。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'出球被对手预判了。',effects:{reputation:-1},nextEvent:'__continue'},
+       fumble:{narrative:'出球送给对手前锋。',effects:{reputation:-4},nextEvent:'__continue'}}},
+    {icon:'📣',text:'指挥防线',hint:'意识 · 心理',attribute:'awareness',dc:11,fatigue:1,art:'🧠',
+     compoundAttr:{primary:'awareness',secondary:'mentality'},
+     results:{critical:{narrative:'防线固若金汤！',effects:{reputation:6},nextEvent:'__continue'},
+       perfect:{narrative:'你的指挥很到位。',effects:{reputation:3},nextEvent:'__continue'},
+       success:{narrative:'你喊了几嗓子。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你的指挥没人听。',effects:{},nextEvent:'__continue'},
+       fumble:{narrative:'你指挥错了方向。',effects:{reputation:-3},nextEvent:'__continue'}}},
+  ],
+};
+const DEFEND_TEMPLATES={
+  forward:[
+    {icon:'🔥',text:'前场逼抢',hint:'速度 · 力量',attribute:'speed',dc:11,fatigue:3,art:'🔥',
+     results:{critical:{narrative:'逼抢导致后卫失误破门！',effects:{reputation:10,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'逼抢造成很大压力。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你完成了逼抢。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'体力消耗太大。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'逼抢时犯规了。',effects:{reputation:-3},nextEvent:'__continue'}}},
+    {icon:'🧠',text:'高位压迫',hint:'意识 · 速度',attribute:'awareness',dc:11,fatigue:3,art:'🧠',
+     compoundAttr:{primary:'awareness',secondary:'speed'},
+     results:{critical:{narrative:'高位压迫制造进球！',effects:{reputation:8},nextEvent:'__continue'},
+       perfect:{narrative:'你的压迫很有效。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你参与了高位压迫。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你被对手绕过。',effects:{reputation:-1},nextEvent:'__continue'},
+       fumble:{narrative:'你跑位失误留出空间。',effects:{reputation:-3},nextEvent:'__continue'}}},
+    {icon:'💪',text:'身体对抗',hint:'力量 · 防守',attribute:'power',dc:12,fatigue:2,art:'💪',
+     results:{critical:{narrative:'你挤开后卫获射门机会！',effects:{reputation:6},nextEvent:'__continue'},
+       perfect:{narrative:'对抗中你占了上风。',effects:{reputation:3},nextEvent:'__continue'},
+       success:{narrative:'你扛住了对手。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你被挤开了。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'对抗中倒地没判罚。',effects:{reputation:-3},nextEvent:'__continue'}}},
+  ],
+  midfielder:[
+    {icon:'💪',text:'回防补位',hint:'力量 · 防守',attribute:'power',dc:11,fatigue:3,art:'🛡️',
+     results:{critical:{narrative:'关键铲断阻止必进球！',effects:{reputation:6,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'回防很及时。',effects:{reputation:3},nextEvent:'__continue'},
+       success:{narrative:'你完成了防守。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'回防不够及时。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'防守犯规送点球！',effects:{reputation:-5},nextEvent:'__continue'}}},
+    {icon:'🔥',text:'中场拦截',hint:'意识 · 速度',attribute:'awareness',dc:11,fatigue:2,art:'🧠',
+     results:{critical:{narrative:'拦截后直接发动反击！',effects:{reputation:8},nextEvent:'__continue'},
+       perfect:{narrative:'你成功拦截了传球。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你干扰了对手传球。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你没能拦截到球。',effects:{reputation:-1},nextEvent:'__continue'},
+       fumble:{narrative:'拦截时犯规了。',effects:{reputation:-3},nextEvent:'__continue'}}},
+    {icon:'🏃',text:'全场覆盖',hint:'速度 · 体能',attribute:'speed',dc:12,fatigue:4,art:'💨',
+     results:{critical:{narrative:'你满场飞奔攻防两端！',effects:{reputation:8},nextEvent:'__continue'},
+       perfect:{narrative:'跑动覆盖很大范围。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你完成了跑动。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'体力不够了。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你跑太累动作变形。',effects:{reputation:-3},nextEvent:'__continue'}}},
+  ],
+  defender:[
+    {icon:'🛡️',text:'关键铲断',hint:'力量 · 防守',attribute:'power',dc:12,fatigue:3,art:'🦶',
+     results:{critical:{narrative:'飞身铲断全场欢呼！',effects:{reputation:10,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你稳稳断下球。',effects:{reputation:4},nextEvent:'__continue'},
+       success:{narrative:'你完成了防守。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'铲断慢了一步。',effects:{reputation:-3},nextEvent:'__continue'},
+       fumble:{narrative:'铲球犯规送任意球！',effects:{reputation:-6},nextEvent:'__continue'}}},
+    {icon:'📍',text:'预判跑位',hint:'意识 · 位置感',attribute:'awareness',dc:11,fatigue:2,art:'🧠',
+     results:{critical:{narrative:'预判断球发动反击！',effects:{reputation:8,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'你提前卡住位置。',effects:{reputation:3},nextEvent:'__continue'},
+       success:{narrative:'你的位置感不错。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你被假动作骗过。',effects:{reputation:-2},nextEvent:'__continue'},
+       fumble:{narrative:'你判断错方向！',effects:{reputation:-5},nextEvent:'__continue'}}},
+    {icon:'🦅',text:'争顶解围',hint:'力量 · 头球',attribute:'power',dc:11,fatigue:3,art:'💪',
+     results:{critical:{narrative:'高高跃起头球解围！',effects:{reputation:6,mentality:1},nextEvent:'__continue'},
+       perfect:{narrative:'争顶成功解围。',effects:{reputation:3},nextEvent:'__continue'},
+       success:{narrative:'你把球顶出危险区。',effects:{reputation:1},nextEvent:'__continue'},
+       fail:{narrative:'你没争到球。',effects:{reputation:-3},nextEvent:'__continue'},
+       fumble:{narrative:'你和队友撞一起！',effects:{reputation:-5},nextEvent:'__continue'}}},
+  ],
+};
+/* 赛季计划逻辑已内联到 loadAndShowEvent 中 */
+
+/* 覆盖 loadAndShowEvent 以支持赛季计划 */
+const origLoadAndShowEvent=loadAndShowEvent;
+loadAndShowEvent=async function(eventId){
+  if(eventId==='__continue'){
+    /* 检查直接跳转标记（用于青训等无赛季计划的阶段） */
+    const _directId=state.flags._nextDirectEvent||null;
+
+    /* 体能检查（优先于事件跳转） */
+    if(!isInjured()){
+      if(state.player.stamina<=0){
+        /* 0体能：强制停赛 */
+        state.injury={type:'suspended',matchesLeft:1+Math.floor(Math.random()*3),recoveryProgress:0,recoveryTarget:0,preInjuryAttrs:null};
+        state.player.reputation-=10;
+        saveGame();
+        await origLoadAndShowEvent('recovery');
+        return;
+      }
+      if(state.player.stamina<5||(state.player.stamina<10&&Math.random()<0.5)){
+        /* 体能不足：触发休息事件（保留 _nextDirectEvent 以便休息后继续） */
+        const restEventId=getRestEvent();
+        saveGame();
+        await origLoadAndShowEvent(restEventId);
+        return;
+      }
+    }
+
+    /* 体能充足：消耗并跳转到目标事件 */
+    if(_directId){
+      delete state.flags._nextDirectEvent;
+      saveGame();
+      await origLoadAndShowEvent(_directId);
+      return;
+    }
+
+    /* 从赛季计划中获取下一个事件 */
+    const plan=state.flags._seasonPlan;
+    const idx=state.flags._seasonPlanIndex;
+    if(plan&&idx<plan.length){
+      state.flags._seasonPlanIndex=idx+1;
+      const nextType=plan[idx];
+
+      /* 检查伤病：如果受伤，只能去康复或场下 */
+      if(isInjured()&&nextType!=='off_field'&&nextType!=='season_end'){
+        if(isHeavyInjured()||isMediumInjured()){
+          state.flags._recoveryNext='__continue';
+          saveGame();
+          await origLoadAndShowEvent('recovery');
+          return;
+        }
+        /* 轻伤：强制康复 */
+        state.flags._recoveryNext='__continue';
+        saveGame();
+        await origLoadAndShowEvent('recovery');
+        return;
+      }
+
+      /* 检查停赛 */
+      if(isInjured()&&state.injury.type==='suspended'){
+        if(nextType==='off_field'){
+          /* 停赛期间可以参加场下 */
+          const offEvents=getOffFieldOptions();
+                    EventRegistry.add({id:'__temp_off',stage:'off',stageLabel:'场下',icon:'🎭',title:'场下活动',art:'☕',narrative:'训练之余的自由时间，选择你想做的事情。',options:offEvents,_ctx:'off_field'});
+          await origLoadAndShowEvent('__temp_off');
+          return;
+        }else{
+          /* 停赛中无法比赛，跳过 */
+          saveGame();
+          await origLoadAndShowEvent('__continue');
+          return;
+        }
+      }
+
+      saveGame();
+      if(nextType==='off_field'){
+        /* 随机选择一个场下事件 */
+        const offEvents=getOffFieldOptions();
+                EventRegistry.add({id:'__temp_off',stage:'off',stageLabel:'场下',icon:'🎭',title:'场下活动',art:'☕',narrative:'训练之余的自由时间，选择你想做的事情。',options:offEvents,_ctx:'off_field'});
+        await origLoadAndShowEvent('__temp_off');
+      }else if(nextType==='season_end'){
+        saveGame();
+        await origLoadAndShowEvent('__season_end');
+        return;
+      }else{
+        const matchEvents={
+          league_match:{id:'__temp_match',stage:'match',stageLabel:'正式比赛',icon:'🏟️',title:'联赛',art:'🏟️',narrative:(()=>{const c=getMatchContext('league');return '对手: '+c.opp+' · 比分 '+c.score+' · '+c.stage})(),_ctx:'league_match'},
+          derby_match:{id:'__temp_match',stage:'match',stageLabel:'德比战',icon:'⚔️',title:'德比大战',art:'🏟️',narrative:(()=>{const c=getMatchContext('derby');return '🔥 德比死敌 '+c.opp+'！比分 '+c.score+' · 全场气氛爆炸'})(),_ctx:'derby_match'},
+          cup_match:{id:'__temp_match',stage:'match',stageLabel:'杯赛',icon:'🏆',title:'杯赛',art:'🏟️',narrative:(()=>{const c=getMatchContext('cup');return '🏆 杯赛 vs '+c.opp+' · 比分 '+c.score+' · 淘汰赛！一场定生死！'})(),_ctx:'cup_match'},
+        };
+        const matchDef=matchEvents[nextType]||matchEvents.league_match;
+        EventRegistry.add({...matchDef});
+        await origLoadAndShowEvent('__temp_match');
+      }
+      return;
+    }
+    /* 赛季计划结束 */
+    await origLoadAndShowEvent('__season_end');
+    return;
+  }
+  return origLoadAndShowEvent(eventId);
+};
+
+/* ═══ INTRO & ACADEMY EVENTS ═══ */
+EventRegistry.add({id:'intro_01',stage:'intro',stageLabel:'序章',icon:'🌅',title:'起点',art:'🌇',_isTrial:true,
+narrative:'夕阳下的街头球场，你和伙伴们踢着野球。一个陌生人站在场边看了很久，朝你走来……',
+options:[
+  {icon:'👋',text:'主动上前打招呼',hint:'展现自信',attribute:'mentality',dc:8,fatigue:0,art:'🤝',
+   results:{critical:{narrative:'你大方地走上前。那人笑了："我是青训营球探，你有这种自信，一定能成大器！"',effects:{reputation:5},setFlags:{scout_good:true},nextEvent:'academy_01'},
+     perfect:{narrative:'你自信地走过去，球探很满意："来试训吧。"',effects:{reputation:3},setFlags:{scout_good:true},nextEvent:'academy_01'},
+     success:{narrative:'你走过去，球探递给你试训邀请卡。',effects:{reputation:1},nextEvent:'academy_01'},
+     fail:{narrative:'你有些犹豫，球探主动走了过来。"来试试吧。"',effects:{reputation:-1},nextEvent:'academy_01'},
+     fumble:{narrative:'你紧张得说不出话。球探等了一会儿才开口。',effects:{reputation:-3},setFlags:{scout_shy:true},nextEvent:'academy_01'}}},
+  {icon:'⚽',text:'继续踢球，用表现说话',hint:'让实力证明一切',attribute:'technique',dc:10,fatigue:2,art:'🔥',
+   results:{critical:{narrative:'你连过两人后远射直挂死角！球探鼓掌："天才！"',effects:{reputation:6},setFlags:{scout_amazed:true},nextEvent:'academy_01'},
+     perfect:{narrative:'你踢得很好，球探赛后递了试训卡。',effects:{reputation:3},nextEvent:'academy_01'},
+     success:{narrative:'你踢得不错，球探递了试训卡。',effects:{reputation:1},nextEvent:'academy_01'},
+     fail:{narrative:'你急于表现，几次失误让球探皱眉。',effects:{reputation:-2},nextEvent:'academy_01'},
+     fumble:{narrative:'你一脚把球踢飞到马路上。球探苦笑着递给你试训卡。',effects:{reputation:-4},nextEvent:'academy_01'}}},
+  {icon:'🏃',text:'假装没注意，默默加练',hint:'低调但努力',attribute:'speed',dc:8,fatigue:2,art:'🌙',
+   results:{critical:{narrative:'你的爆发力让球探眼前一亮。"这种自律和天赋，太少见了！"',effects:{reputation:4},nextEvent:'academy_01'},
+     perfect:{narrative:'你的加练让球探印象深刻。',effects:{reputation:2},nextEvent:'academy_01'},
+     success:{narrative:'球探在你加练结束后找到你。',effects:{reputation:1},nextEvent:'academy_01'},
+     fail:{narrative:'你加练到天黑，球探已经走了。第二天发现了试训卡。',effects:{reputation:-1},nextEvent:'academy_01'},
+     fumble:{narrative:'你加练时扭到脚踝，球探留下试训卡后离开了。',effects:{reputation:-3,stamina:-2},nextEvent:'academy_01'}}},
+]});
+
+EventRegistry.add({id:'academy_01',stage:'academy',stageLabel:'青训营',icon:'🏫',title:'试训日',art:'🌧️',_isTrial:true,
+narrative:'大雨中的青训基地。二十多个少年在泥泞场地上等待。教练吹响哨子——试训开始了。',
+options:[
+  {icon:'⚡',text:'全力冲刺展示速度',hint:'速度 · 爆发',attribute:'speed',dc:10,fatigue:2,art:'💨',canGrow:true,
+   results:{critical:{narrative:'你像一阵风掠过防守队员！教练大声喊："就这个速度！"',effects:{reputation:6},setFlags:{academy_star:true},nextEvent:'__continue'},
+     perfect:{narrative:'你的速度让人印象深刻。',effects:{reputation:3},nextEvent:'__continue'},
+     success:{narrative:'你的速度不错。',effects:{reputation:1},nextEvent:'__continue'},
+     fail:{narrative:'雨天湿滑，你加速时滑倒了。',effects:{reputation:-2},nextEvent:'__continue'},
+     fumble:{narrative:'你踩到水坑摔进泥里。全场哄笑。',effects:{reputation:-5},nextEvent:'__continue'}}},
+  {icon:'🎯',text:'展示射门基本功',hint:'技术 · 稳定',attribute:'technique',dc:10,fatigue:2,art:'🎯',canGrow:true,
+   results:{critical:{narrative:'你的每一次触球都干净利落。教练把你叫到一边："你直接来一线训练。"',effects:{reputation:5},setFlags:{academy_star:true},nextEvent:'__continue'},
+     perfect:{narrative:'你表现优异，教练很满意。',effects:{reputation:3},nextEvent:'__continue'},
+     success:{narrative:'中规中矩的表现。',effects:{reputation:1},nextEvent:'__continue'},
+     fail:{narrative:'泥泞场地让你几次停球失误。',effects:{reputation:-2},nextEvent:'__continue'},
+     fumble:{narrative:'你滑倒了，球滚出界外。',effects:{reputation:-4},nextEvent:'__continue'}}},
+  {icon:'💪',text:'高强度对抗训练',hint:'力量 · 对抗 · 高风险',attribute:'power',dc:14,fatigue:4,art:'🛡️',canGrow:true,
+   results:{critical:{narrative:'你把对手挤开后干净断球。"好样的！"教练喊道。',effects:{reputation:5},setFlags:{academy_star:true},nextEvent:'__continue'},
+     perfect:{narrative:'对抗中你表现强硬。',effects:{reputation:3},nextEvent:'__continue'},
+     success:{narrative:'对抗中你表现不错。',effects:{reputation:1},nextEvent:'__continue'},
+     fail:{narrative:'对抗中你被撞倒了。',effects:{reputation:-2},nextEvent:'__continue'},
+     fumble:{narrative:'你被撞飞了，在地上躺了好一会儿。',effects:{reputation:-4},nextEvent:'__continue'}}},
+  {icon:'🐢',text:'假装很忙，实际摸鱼',hint:'意识 · 伪装',attribute:'awareness',dc:8,fatigue:0,art:'😴',canGrow:true,
+   results:{critical:{narrative:'你完美地装出努力的样子。',effects:{},nextEvent:'__continue'},
+     perfect:{narrative:'你成功混过了训练。',effects:{},nextEvent:'__continue'},
+     success:{narrative:'你偷了一天懒。',effects:{},nextEvent:'__continue'},
+     fail:{narrative:'教练注意到你在偷懒！',effects:{reputation:-3},nextEvent:'__continue'},
+     fumble:{narrative:'教练当场抓住你偷懒！"你给我加练一周！"',effects:{reputation:-7},nextEvent:'__continue'}}},
+]});
+
+EventRegistry.add({id:'academy_02',stage:'academy',stageLabel:'青训营',icon:'⚔️',title:'队内对抗赛',art:'🏟️',_isTrial:true,
+narrative:'训练第三天，教练宣布队内对抗赛。表现好的人将获得首发位置。',
+options:[
+  {icon:'⚡',text:'全力进攻，争取进球',hint:'射术 · 机会把握',attribute:'technique',dc:11,fatigue:2,art:'🥅',canGrow:true,
+   results:{critical:{narrative:'你接到直塞，冷静晃过门将推射入网！全场欢呼！',effects:{reputation:6},setFlags:{match_hero:true},nextEvent:'__continue'},
+     perfect:{narrative:'你打入一球，展现了终结能力。',effects:{reputation:3},nextEvent:'__continue'},
+     success:{narrative:'你有一次不错的射门。',effects:{reputation:1},nextEvent:'__continue'},
+     fail:{narrative:'你太急于进球，几次射门都偏了。',effects:{reputation:-3},nextEvent:'__continue'},
+     fumble:{narrative:'你一脚射门踢空了。',effects:{reputation:-5},nextEvent:'__continue'}}},
+  {icon:'🏃',text:'跑位拉扯防线',hint:'速度 · 空间',attribute:'speed',dc:11,fatigue:2,art:'💨',canGrow:true,
+   results:{critical:{narrative:'你的跑位撕开了防线，创造了两个进球机会！',effects:{reputation:5},nextEvent:'__continue'},
+     perfect:{narrative:'你的跑位很有威胁。',effects:{reputation:3},nextEvent:'__continue'},
+     success:{narrative:'你拉扯了防线。',effects:{reputation:1},nextEvent:'__continue'},
+     fail:{narrative:'你的跑位和队友不默契。',effects:{reputation:-2},nextEvent:'__continue'},
+     fumble:{narrative:'你越位了三次。',effects:{reputation:-4},nextEvent:'__continue'}}},
+  {icon:'🤝',text:'大声指挥队友',hint:'领导力 · 沟通',attribute:'awareness',dc:10,fatigue:1,art:'📣',canGrow:true,
+	   results:{critical:{narrative:'你的指挥让防线更有组织！队友都听你的。',effects:{reputation:3},nextEvent:'__continue'},
+	     perfect:{narrative:'你的沟通起了作用，防线更紧密了。',effects:{reputation:1},nextEvent:'__continue'},
+	     success:{narrative:'你和队友配合得不错。',effects:{},nextEvent:'__continue'},
+	     fail:{narrative:'队友没太在意你说什么。',effects:{},nextEvent:'__continue'},
+	     fumble:{narrative:'你喊错了战术！队友们一脸困惑。',effects:{reputation:-3},nextEvent:'__continue'}}}]});
+
+EventRegistry.add({id:'academy_03',stage:'academy',stageLabel:'青训营',icon:'📢',title:'教练谈话',art:'👔',_isTrial:true,
+narrative:'教练把你叫到办公室。"你有天赋，但青训营不是只有天赋就够的。"',
+options:[{icon:'💪',text:'"我会加倍努力训练！"',hint:'表态 · 态度',attribute:'mentality',dc:10,fatigue:0,art:'🔥',
+   results:{critical:{narrative:'教练满意地点头："好，我给你安排专属训练。"',effects:{reputation:3},setFlags:{coach_trust:true},nextEvent:'__continue'},
+     perfect:{narrative:'教练很满意你的态度。',effects:{reputation:2},nextEvent:'__continue'},
+     success:{narrative:'教练点头："态度不错。"',effects:{reputation:1},nextEvent:'__continue'},
+     fail:{narrative:'你说得太激动了，教练皱眉。',effects:{reputation:-1},nextEvent:'__continue'},
+     fumble:{narrative:'你打翻了桌上的水杯。教练叹气。',effects:{reputation:-3},nextEvent:'__continue'}}},
+  {icon:'🧠',text:'"教练，我哪里需要改进？"',hint:'谦虚 · 求知',attribute:'awareness',dc:12,fatigue:0,art:'📚',
+   results:{critical:{narrative:'教练眼前一亮："好问题！"他花了半小时给你分析录像。',effects:{reputation:4},setFlags:{coach_mentor:true},nextEvent:'__continue'},
+     perfect:{narrative:'教练详细分析了你的问题。',effects:{reputation:2},nextEvent:'__continue'},
+     success:{narrative:'教练指出了你的几个问题。',effects:{reputation:1},nextEvent:'__continue'},
+     fail:{narrative:'教练说了几句，你觉得有些笼统。',effects:{reputation:-1},nextEvent:'__continue'},
+     fumble:{narrative:'你问的问题太基础了，教练有些不耐烦。',effects:{reputation:-3},nextEvent:'__continue'}}},
+  {icon:'😎',text:'"我会证明自己的。"',hint:'自信 · 强势 · 高风险',attribute:'mentality',dc:14,fatigue:0,art:'👑',
+   results:{critical:{narrative:'教练大笑："好！我喜欢这种自信！"',effects:{reputation:4},nextEvent:'__continue'},
+     perfect:{narrative:'教练笑了："那就用表现说话。"',effects:{reputation:2},nextEvent:'__continue'},
+     success:{narrative:'教练不置可否："看你的了。"',effects:{},nextEvent:'__continue'},
+     fail:{narrative:'教练脸色沉了下来："自大不是自信。"',effects:{reputation:-3},nextEvent:'__continue'},
+     fumble:{narrative:'你说话时声音发抖，暴露了内心的不安。',effects:{reputation:-5},nextEvent:'__continue'}}},
+]});
+
+EventRegistry.add({id:'academy_04',stage:'academy',stageLabel:'青训营',icon:'🌧️',title:'瓶颈期',art:'🌧️',_isTrial:true,
+narrative:'训练进入了第三周，你遇到了第一个真正的瓶颈——身体开始跟不上训练强度，技术动作也变得粗糙。教练把所有人叫到一起：「天赋只能带你们到这里，接下来怎么走，每个人要自己想清楚。」这是你职业生涯的第一个岔路口。',
+options:[
+  {icon:'😤',text:'【身体流】加练体能，用汗水砸开瓶颈',hint:'身体是一切的根基 · 速度+力量',attribute:'power',dc:13,fatigue:3,art:'🔥',
+   results:{critical:{narrative:'你每天比别人多跑二十圈、多做三组力量。一周后体能测试你拿了第一。教练点头：「好身板，到哪都有人要。」',effects:{speed:1,power:1,reputation:3},nextEvent:'__continue'},
+     perfect:{narrative:'汗水没有白流，你的速度和对抗能力都上了一个台阶。',effects:{speed:1,power:1,reputation:2},nextEvent:'__continue'},
+     success:{narrative:'加练让你的身体素质有了明显提升，你感觉自己更壮、更快了。',effects:{speed:1,power:1},nextEvent:'__continue'},
+     fail:{narrative:'你练得太猛，肌肉酸痛了好几天，进步有限。教练说：「蛮干不是办法。」',effects:{reputation:-1},nextEvent:'__continue'},
+     fumble:{narrative:'你硬拉时逞能加重量，腰伤复发，被队医强制休息三天。',effects:{reputation:-1},nextEvent:'__continue'}}},
+  {icon:'🧠',text:'【科学流】制定恢复计划，精细化训练',hint:'科学训练才能走得远 · 体力上限+心理',attribute:'awareness',dc:13,fatigue:1,art:'📋',
+   results:{critical:{narrative:'你拿出了一份详细的训练日志——心率、睡眠、疲劳度一目了然。教练眼睛亮了：「你有顶级球员的潜质，自我管理能力太强了。」',effects:{mentality:1,staminaMax:2,reputation:3},nextEvent:'__continue'},
+     perfect:{narrative:'科学的恢复方案让你的状态曲线平稳上升，体能储备和心理韧性都更好了。',effects:{mentality:1,staminaMax:2,reputation:2},nextEvent:'__continue'},
+     success:{narrative:'你学会了倾听身体的信号，训练效率明显提高，体能上限也得到了扩展。',effects:{mentality:1,staminaMax:2},nextEvent:'__continue'},
+     fail:{narrative:'你花太多时间做计划反而落下了训练，教练让你少想多做。',effects:{reputation:-1},nextEvent:'__continue'},
+     fumble:{narrative:'你的恢复方案被体能教练一眼看穿——网上抄来的，跟你的身体条件完全不匹配。',effects:{reputation:-1},nextEvent:'__continue'}}},
+  {icon:'🤝',text:'【经验流】向前辈虚心请教，打磨技术与意识',hint:'经验与智慧无价 · 技术+意识',attribute:'technique',dc:13,fatigue:1,art:'👥',
+   results:{critical:{narrative:'一位即将退役的老队员被你的虚心打动，每天训练后单独带你练技术和跑位。你像海绵一样吸收，进步神速。',effects:{technique:1,awareness:1,reputation:3},nextEvent:'__continue'},
+     perfect:{narrative:'前辈的指点让你的技术细节和比赛阅读能力都有了明显的长进。',effects:{technique:1,awareness:1,reputation:2},nextEvent:'__continue'},
+     success:{narrative:'你从老队员们那里学到了不少实用的技术和跑位技巧。',effects:{technique:1,awareness:1},nextEvent:'__continue'},
+     fail:{narrative:'你问了一圈但大家都有自己要忙的事，只能靠自己摸索。',effects:{reputation:-1},nextEvent:'__continue'},
+     fumble:{narrative:'你跟错了师傅——他教了你一堆业余联赛的坏习惯，教练看得直摇头。',effects:{reputation:-1},nextEvent:'__continue'}}},
+]});
+
+EventRegistry.add({id:'academy_05',stage:'academy',stageLabel:'青训营',icon:'🏆',title:'结业考核',art:'🏟️',_isTrial:true,
+narrative:'青训结束了。今天是结业考核，教练们要选出进入梯队的球员。',
+options:[
+  {icon:'⚡',text:'展现你的速度优势',hint:'冲刺 · 爆发',attribute:'speed',dc:12,fatigue:3,art:'💨',canGrow:true,
+   results:{critical:{narrative:'你像闪电撕裂防线，打入一球并助攻一次！第一个被选入梯队。',effects:{reputation:8},setFlags:{graduate_star:true},nextEvent:'__continue'},
+     perfect:{narrative:'你的速度帮了大忙，成功入选。',effects:{reputation:4},nextEvent:'__continue'},
+     success:{narrative:'你表现合格，入选了。',effects:{reputation:2},nextEvent:'__continue'},
+     fail:{narrative:'关键时刻你滑倒了。但教练还是给了你机会。',effects:{reputation:-3},nextEvent:'__continue'},
+     fumble:{narrative:'你加速时拉伤了大腿。',effects:{reputation:-5},nextEvent:'__continue'}}},
+  {icon:'🎯',text:'用射术打动教练',hint:'技术 · 终结',attribute:'technique',dc:12,fatigue:3,art:'🎯',canGrow:true,
+   results:{critical:{narrative:'你展示了精准射术，教练组一致认为你是最佳球员。',effects:{reputation:8},setFlags:{graduate_star:true},nextEvent:'__continue'},
+     perfect:{narrative:'你表现优异，入选了。',effects:{reputation:4},nextEvent:'__continue'},
+     success:{narrative:'你表现中规中矩，入选了。',effects:{reputation:2},nextEvent:'__continue'},
+     fail:{narrative:'你有些紧张，几次失误。',effects:{reputation:-3},nextEvent:'__continue'},
+     fumble:{narrative:'你停球失误，球弹到教练脚下。',effects:{reputation:-5},nextEvent:'__continue'}}},
+  {icon:'🤝',text:'帮助落后的队友',hint:'团队精神 · 领导力',attribute:'mentality',dc:10,fatigue:1,art:'💪',canGrow:true,
+	   results:{critical:{narrative:'你主动帮助发挥不佳的队友，他的表现立刻提升了！教练组对你刮目相看。',effects:{reputation:6},nextEvent:'__continue'},
+	     perfect:{narrative:'你鼓励了紧张的队友，他稳定下来了。',effects:{reputation:3},nextEvent:'__continue'},
+	     success:{narrative:'你帮助了需要支持的队友。',effects:{reputation:1},nextEvent:'__continue'},
+	     fail:{narrative:'你帮了倒忙，队友更紧张了。',effects:{reputation:-1},nextEvent:'__continue'},
+	     fumble:{narrative:'你和队友爆发了争执！场面尴尬。',effects:{reputation:-4},nextEvent:'__continue'}}}]});
+
+EventRegistry.add({id:'to_club',stage:'transition',stageLabel:'新征程',icon:'🎉',title:'加入俱乐部',art:'🏟️',_isTrial:true,
+narrative:'恭喜！你成功通过青训考核，正式加入俱乐部一线队。新的赛季即将开始……',
+options:[{icon:'▶️',text:'开始职业生涯',hint:'准备好了',attribute:'mentality',dc:5,fatigue:0,art:'⚽',
+   results:{critical:{narrative:'你充满信心地踏入球场。',effects:{reputation:3},nextEvent:'__season_planner'},
+     perfect:{narrative:'你准备好了。',effects:{reputation:1},nextEvent:'__season_planner'},
+     success:{narrative:'新的征程开始了。',effects:{},nextEvent:'__season_planner'},
+     fail:{narrative:'你有些紧张，但还是迈出了这一步。',effects:{},nextEvent:'__season_planner'},
+     fumble:{narrative:'你第一天就迟到了。',effects:{reputation:-2},nextEvent:'__season_planner'}}},
+]});
+
+/* ═══ INIT ═══ */
+showMenu();
+</script>
+</body>
+</html>
